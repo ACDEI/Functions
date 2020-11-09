@@ -1,17 +1,8 @@
 import * as functions from 'firebase-functions';
 import * as express from 'express';
 //import * as cors from 'cors';
-//var serviceAccount = require("src/serviceAccountKey.json");
 
 import * as admin from 'firebase-admin';
-
-/*
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://graffiti-9b570.firebaseio.com"
-});
-*/
-
 admin.initializeApp();
 
 let app = express();
@@ -24,7 +15,7 @@ let app = express();
 //   response.send("Hello from Firebase!");
 // });
 
-app.get("/", async (req, res) => {
+app.get("/users/", async (req, res) => {
     const snapshot = await admin.firestore().collection("users").get();
 
     console.log(snapshot);
@@ -42,12 +33,12 @@ app.get("/", async (req, res) => {
     res.status(200).send(JSON.stringify(users));
 });
 
-app.post("/", async (req, res) => {
+app.post("/users/", async (req, res) => {
     const user = req.body;
   
     await admin.firestore().collection("users").add(user);
   
     res.status(201).send();
-  });
+});
 
-exports.user = functions.https.onRequest(app);
+exports.APIRest = functions.https.onRequest(app);
