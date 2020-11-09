@@ -5,7 +5,7 @@ import * as express from 'express';
 import * as admin from 'firebase-admin';
 admin.initializeApp();
 
-let app = express();
+const app = express();
 
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
@@ -20,10 +20,10 @@ app.get("/users/", async (req, res) => {
 
     console.log(snapshot);
 
-    let users:any = [];
+    const users:any = [];
     snapshot.forEach((doc) => {
-        let id = doc.id;
-        let data = doc.data();
+        const id = doc.id;
+        const data = doc.data();
 
         console.log(id, data);
 
