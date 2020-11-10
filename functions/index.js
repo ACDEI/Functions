@@ -49,6 +49,35 @@ app.get('/users/id/:id',async(req,res)=>{
     }
 })
 
+
+//query search user for name --not working yet---
+app.get('/users/nombre/:nombre',async(req,res)=>{
+    try{
+
+        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        const snapshot = await admin.firestore().collection('users');
+        const users = [];
+        let product = await snapshot.get().then((snapshot) =>{
+            snapshot.forEach((doc) => {
+            const name = doc.data().fullName; 
+            if(name.toLowerCase().includes(req.params.nombre.toLowerCase())){
+                const id = doc.id;
+                const data = doc.data();
+                users.push({ id, ...data });
+            }
+          
+        });
+        });
+        console.log(product);
+        res.status(200).send(JSON.stringify(users));
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
+
 //get users from ..to 
 app.get('/users/from/:from/:to',async(req,res)=>{
     try{
@@ -138,20 +167,7 @@ app.delete("/users/:id", async (req, res) => {
 
 /// query for user 
 
-//query search user for name --not working yet---
-app.get('/users/nombre/:nombre',async(req,res)=>{
-    try{
 
-        const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
-        let product = await snapshot.get();
-        console.log(product);
-        res.status(200).send(JSON.stringify(product));
-
-    }catch(error){
-        console.log(error);
-        res.status(500).send(error);
-    }
-})
 
 //-------------------------------------------------------------------------Publication Functions--------------------------------------------------------------------------
 
