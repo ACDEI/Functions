@@ -1,26 +1,45 @@
-import * as functions from 'firebase-functions';
-import * as express from 'express';
-//import * as cors from 'cors';
-//import * as firebase from 'firebase/app';
-import * as geofirestore from 'geofirestore';
+const functions = require("firebase-functions");
+const express = require("express");
+//const cors = require("cors");
+var GeoFirestore = require('geofirestore').GeoFirestore;
 
-import * as admin from 'firebase-admin';
+const admin = require("firebase-admin");
 admin.initializeApp();
 
-const db = admin.firestore();
-const GeoFirestore = geofirestore.initializeApp(db);
 const app = express();
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+const db =  admin.firestore();
 
+// Create a GeoFirestore reference
+const geoFirestore = new GeoFirestore(db);
 
-///BASIC OPERATIONS
+app.get("/near/:lat&:lng&:dist", async (req, res) => {
+    const lat = Number(req.params.lat);
+    const lng = Number(req.params.lng);
+    const dist = Number(req.params.dist);
+
+    const geoPhotos = geoFirestore.collection("publications").near({
+        center: new admin.firestore.GeoPoint(lat,lng),
+        radius: dist
+    })
+
+    const geosnap = await geoPhotos.get();
+
+    res.status(200).send(geosnap.docs);
+});
+
+app.post("/publications/", async (req, res) => {
+    const publication = req.body;
+
+    const pub = {
+        fotoUrl: publication.fotoUrl,
+        coordinates: new admin.firestore.GeoPoint(publication.lat, publication.lng)
+    }
+    
+    await geoFirestore.collection("publications").add(pub);
+
+    res.status(201).send();
+});
 
 //GET
 //get users
@@ -28,7 +47,7 @@ app.get("/users/", async (req, res) => {
     try {
 
         const snapshot = await admin.firestore().collection("users").get();
-        const users:any = [];
+        const users = [];
         snapshot.forEach((doc) => {
             const id = doc.id;
             const data = doc.data();
@@ -61,10 +80,10 @@ app.get('/users/:id',async(req,res)=>{
 app.get('/users/:from/:to',async(req,res)=>{
     try{
 
-        const from:number = +req.params.from;
-        const to:number = +req.params.to;
+        const from = Number(req.params.from);
+        const to = Number(req.params.to);
         const snapshot = await admin.firestore().collection("users").offset(from).limit(to).get();
-        const users:any = [];
+        const users = [];
         snapshot.forEach((doc) => {
             const id = doc.id;
             const data = doc.data();
@@ -111,11 +130,9 @@ app.post("/users/", async (req, res) => {
 });
 
 
-
 //PUT 
 
 //put users
-
 app.put("/users/:id", async (req, res) => {
 
     try{
@@ -140,7 +157,6 @@ app.put("/users/:id", async (req, res) => {
 //DELETE 
 
 //delete users 
-
 app.delete("/users/:id", async (req, res) => {
 
     try{
@@ -154,12 +170,9 @@ app.delete("/users/:id", async (req, res) => {
     }
 });
 
-
 ///QUERY OPERATIONS 
 
 /// query for user 
-
-
 
 //query search user for name --not working yet---
 app.get('/users/nombre/:nombre',async(req,res)=>{
@@ -175,9 +188,5 @@ app.get('/users/nombre/:nombre',async(req,res)=>{
         res.status(500).send(error);
     }
 })
-
-
-
-
 
 exports.APIRest = functions.https.onRequest(app);
