@@ -71,11 +71,11 @@ app.get('/users/:from/:to',async(req,res)=>{
 })
 
 //get count Users
-app.get("/users/count", async(req,res)=> {
+app.get("/users/count/", async(req,res)=> {
     try{
 
-        const snapshot = await admin.firestore().collection("users").get();
-        res.status(200).send(JSON.stringify(snapshot.size));
+        const snapshot = await db.collection("users").get();
+        res.status(200).send(snapshot);
 
     }catch(error){
         console.log(error);
