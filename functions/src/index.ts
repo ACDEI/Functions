@@ -16,6 +16,7 @@ const app = express();
 // });
 
 
+///BASIC OPERATIONS
 
 //GET
 //get users
@@ -38,7 +39,7 @@ app.get("/users/", async (req, res) => {
 });
 
 //get user id 
-app.get('/id/:id',async(req,res)=>{
+app.get('/users/:id',async(req,res)=>{
     try{
         
         const snapshot = await admin.firestore().collection('users').doc(req.params.id);
@@ -53,7 +54,7 @@ app.get('/id/:id',async(req,res)=>{
 })
 
 //get users from ..to 
-app.get('/:from/:to',async(req,res)=>{
+app.get('/users/:from/:to',async(req,res)=>{
     try{
 
         const from:number = +req.params.from;
@@ -75,7 +76,7 @@ app.get('/:from/:to',async(req,res)=>{
 
 
 //get count Users
-app.get("/countUsers", async(req,res)=> {
+app.get("/users/count", async(req,res)=> {
     try{
 
         const snapshot = await admin.firestore().collection("users").get();
@@ -111,7 +112,7 @@ app.post("/users/", async (req, res) => {
 
 //put users
 
-app.put("/:id", async (req, res) => {
+app.put("/users/:id", async (req, res) => {
 
     try{
         
@@ -136,7 +137,7 @@ app.put("/:id", async (req, res) => {
 
 //delete users 
 
-app.delete("/:id", async (req, res) => {
+app.delete("/users/:id", async (req, res) => {
 
     try{
 
@@ -148,6 +149,30 @@ app.delete("/:id", async (req, res) => {
         res.status(500).send(error);
     }
 });
+
+
+///QUERY OPERATIONS 
+
+/// query for user 
+
+
+
+//query search user for name --not working yet---
+app.get('/users/nombre/:nombre',async(req,res)=>{
+    try{
+
+        const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        let product = await snapshot.get();
+        console.log(product);
+        res.status(200).send(JSON.stringify(product));
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
+
 
 
 
