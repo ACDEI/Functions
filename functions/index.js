@@ -26,7 +26,7 @@ app.get("/users/", async (req, res) => {
             const data = doc.data();
             users.push({ id, ...data });
         });
-        res.status(200).send(JSON.stringify(users));
+        res.status(200).send(users);
 
     }catch(error){
         console.log(error);
@@ -34,23 +34,10 @@ app.get("/users/", async (req, res) => {
     }
 });
 
-//get user id 
-app.get('/users/id/:id',async(req,res)=>{
-    try{
-    
-        const snapshot = admin.firestore().collection('users').doc(req.params.id);
-        let product = await snapshot.get();
-        let user = product.data();
-        res.status(200).send(JSON.stringify(user));
-
-    }catch(error){
-        console.log(error);
-        res.status(500).send(error);
-    }
-})
 
 
-//query search user for name --not working yet---
+
+//query search user for name
 app.get('/users/nombre/:nombre',async(req,res)=>{
     try{
 
@@ -69,7 +56,7 @@ app.get('/users/nombre/:nombre',async(req,res)=>{
         });
         });
         console.log(product);
-        res.status(200).send(JSON.stringify(users));
+        res.status(200).send(users);
 
     }catch(error){
         console.log(error);
@@ -77,7 +64,60 @@ app.get('/users/nombre/:nombre',async(req,res)=>{
     }
 })
 
+//query search user for email in order ascendent 
+app.get('/users/email/:email',async(req,res)=>{
+    try{
 
+        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        const snapshot = await admin.firestore().collection('users').orderBy("email","asc");
+        const users = [];
+        let product = await snapshot.get().then((snapshot) =>{
+            snapshot.forEach((doc) => {
+            const email = doc.data().email; 
+            if(email.toLowerCase().includes(req.params.email.toLowerCase())){
+                const id = doc.id;
+                const data = doc.data();
+                users.push({ id, ...data });
+            }
+        });
+        });
+        console.log(product);
+        res.status(200).send(users);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
+/*
+//query search user for name 
+app.get('/users/aaaaaaa/:email',async(req,res)=>{
+    try{
+
+        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        const snapshot = await admin.firestore().collection('users').orderBy("email","asc");
+        const users = [];
+        let product = await snapshot.get().then((snapshot) =>{
+            snapshot.forEach((doc) => {
+            const email = doc.data().email; 
+            if(email.toLowerCase().includes(req.params.email.toLowerCase())){
+                const id = doc.id;
+                const data = doc.data();
+                users.push({ id, ...data });
+            }
+        });
+        });
+        console.log(product);
+        res.status(200).sendusers;
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
+*/
 //get users from ..to 
 app.get('/users/from/:from/:to',async(req,res)=>{
     try{
@@ -91,7 +131,7 @@ app.get('/users/from/:from/:to',async(req,res)=>{
             const data = doc.data();
             users.push({ id, ...data });
         });
-        res.status(200).send(JSON.stringify(users));
+        res.status(200).send(users);
 
     }catch(error){
         console.log(error);
@@ -113,6 +153,22 @@ app.get("/users/count/", async(req,res)=> {
     }
 })
 
+
+//get user id 
+app.get('/users/:id',async(req,res)=>{
+    try{
+    
+        const snapshot = admin.firestore().collection('users').doc(req.params.id);
+        let product = await snapshot.get();
+        let user = product.data();
+        res.status(200).send((user));
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
 //post users 
 app.post("/users/", async (req, res) => {
 
@@ -120,7 +176,7 @@ app.post("/users/", async (req, res) => {
 
         const user = req.body;
         await admin.firestore().collection("users").add(user);
-        res.status(201).send();
+        res.status(200).send();
 
     }catch(error){
         console.log(error);
