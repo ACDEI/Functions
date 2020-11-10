@@ -91,33 +91,48 @@ app.get('/users/email/:email',async(req,res)=>{
 })
 
 /*
-//query search user for name 
-app.get('/users/aaaaaaa/:email',async(req,res)=>{
+//query get publications trough name of user 
+app.get('/users/publications/:name',async(req,res)=>{
     try{
+       
 
-        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
-        const snapshot = await admin.firestore().collection('users').orderBy("email","asc");
+        const snapshot = await admin.firestore().collection('users');
+        const comentarios = [];
         const users = [];
-        let product = await snapshot.get().then((snapshot) =>{
+
+        await snapshot.get().then((snapshot) =>{
             snapshot.forEach((doc) => {
-            const email = doc.data().email; 
-            if(email.toLowerCase().includes(req.params.email.toLowerCase())){
+            const name = doc.data().fullName;
+
+            if(name.toLowerCase().includes(req.params.nombre.toLowerCase())){
                 const id = doc.id;
-                const data = doc.data();
-                users.push({ id, ...data });
+                const coments = admin.firestore().collection('publicacions').where("uid","==",id).get();
+                coments.then((snap)=>{
+                    const id = doc.id;
+                    const data = doc.data();
+                    comentarios.push({ id, ...data });
+                }) 
+ 
             }
+
+            })
+          
         });
-        });
-        console.log(product);
-        res.status(200).sendusers;
+
+
+       
+        res.status(200).send(comentarios);
 
     }catch(error){
         console.log(error);
         res.status(500).send(error);
     }
-})
+});
+
 
 */
+
+
 //get users from ..to 
 app.get('/users/from/:from/:to',async(req,res)=>{
     try{
