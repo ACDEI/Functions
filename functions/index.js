@@ -242,20 +242,65 @@ app.delete("/users/:id", async (req, res) => {
 
 //-------------------------------------------------------------------------Publication Functions--------------------------------------------------------------------------
 
-//Post publication
-app.post("/publications/", async (req, res) => {
+//Put publication
+app.put("/publications/", async (req, res) => {
+    try{
     const publication = req.body;
-
+    const id = publication.uid;
     const pub = {
+        uid: publication.uid,
         fotoUrl: publication.fotoUrl,
+        titulo: publication.titulo,
+        grafitero:publication.grafitero,
+        fecha:publication.fecha,
+        estado:publication.estado,
+        nLikes:publication.nLikes,
+        tematicas:publication.tematicas,
         coordinates: new admin.firestore.GeoPoint(publication.lat, publication.lng)
     }
     
     await geoFirestore.collection("publications").add(pub);
 
-    res.status(201).send();
+    res.status(201).send("Publication is added.");
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
 });
 
+//Get from tematicas
+app.get('/publications/tematicas/:tematicas',async(req,res)=>{
+    try{
+
+        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        const snapshot = await admin.firestore().collection('publications');
+        const users = [];
+        let product = await snapshot.get().then((snapshot) =>{
+            snapshot.forEach((doc) => {
+                console.log(doc);
+            const name = doc.data().tematicas; 
+            if(name.toLowerCase().includes(req.params.tematicas.toLowerCase())){
+                const id = doc.id;
+                const data = doc.data();
+                users.push({ id, ...data });
+            }
+          
+        });
+        });
+        console.log(product);
+        res.status(200).send(users);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+    
+    
+})
+
+
+//Get Count
 app.get("/publications/count", async (req, res) => {
     try{
 
@@ -269,6 +314,40 @@ app.get("/publications/count", async (req, res) => {
         res.status(500).send(error);
     }
 });
+
+//get list of publications
+app.get("/publications/", async (req, res) => {
+    try {
+
+        const snapshot = await admin.firestore().collection("publications").get();
+        const pub = [];
+        snapshot.forEach((doc) => {
+            const id = doc.id;
+            const data = doc.data();
+            pub.push({ id, ...data });
+        });
+        res.status(200).send(pub);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
+//Delete Publication
+app.delete("/publications/:id", async (req, res) => {
+
+    try{
+
+        await admin.firestore().collection("publications").doc(req.params.id).delete();
+        res.status(200).send("Publication delete");
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
 
 //Query publicaciones cercanas a un punto
 app.get("/near/:lat&:lng&:dist", async (req, res) => {
