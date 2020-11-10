@@ -35,7 +35,7 @@ app.get("/users/", async (req, res) => {
 });
 
 //get user id 
-app.get('/users/:id',async(req,res)=>{
+app.get('/users/id/:id',async(req,res)=>{
     try{
     
         const snapshot = admin.firestore().collection('users').doc(req.params.id);
@@ -50,7 +50,7 @@ app.get('/users/:id',async(req,res)=>{
 })
 
 //get users from ..to 
-app.get('/users/:from/:to',async(req,res)=>{
+app.get('/users/from/:from/:to',async(req,res)=>{
     try{
 
         const from = Number(req.params.from);
@@ -74,8 +74,9 @@ app.get('/users/:from/:to',async(req,res)=>{
 app.get("/users/count", async(req,res)=> {
     try{
 
-        const snapshot = await admin.firestore().collection("users").get();
-        res.status(200).send(JSON.stringify(snapshot.size));
+        await db.collection("users").get().then(snap => {
+            res.status(200).send({length: snap.size});
+        });
 
     }catch(error){
         console.log(error);
@@ -166,6 +167,20 @@ app.post("/publications/", async (req, res) => {
     await geoFirestore.collection("publications").add(pub);
 
     res.status(201).send();
+});
+
+app.get("/publications/count", async (req, res) => {
+    try{
+
+            await db.collection("publications").get().then(snap => {
+                res.status(200).send({length: snap.size});
+            });
+    
+        
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
 });
 
 //Query publicaciones cercanas a un punto
