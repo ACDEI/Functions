@@ -196,7 +196,6 @@ app.post("/users/", async (req, res) => {
      
          if(resultado == null){
             const user = req.body;
-            await admin.firestore().collection("users").add(user);
             await admin.firestore().collection('users').doc(user.uid).set({
                 email: user.email,
                 fullName: user.fullName,
