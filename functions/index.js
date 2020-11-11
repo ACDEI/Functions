@@ -276,22 +276,19 @@ app.get('/publications/tematicas/:tematicas',async(req,res)=>{
     try{
 
         //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
-        const snapshot = await admin.firestore().collection('publications');
-        const users = [];
-        let product = await snapshot.get().then((snapshot) =>{
-            snapshot.forEach((doc) => {
-                console.log(doc);
-            const name = doc.data().tematicas; 
-            if(name.toLowerCase().includes(req.params.tematicas.toLowerCase())){
+        const snapshot = await admin.firestore().collection('publications').where("tematicas","==",req.params.tematicas);
+        const publications = [];
+        let product = await snapshot.get().then((snap)=>{
+
+            snap.forEach((doc)=>{
                 const id = doc.id;
                 const data = doc.data();
-                users.push({ id, ...data });
-            }
-          
+                publications.push({id, ...data});
+            })
+
         });
-        });
-        console.log(product);
-        res.status(200).send(users);
+        
+        res.status(200).send(publications);
 
     }catch(error){
         console.log(error);
