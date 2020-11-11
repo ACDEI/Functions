@@ -90,38 +90,40 @@ app.get('/users/email/:email',async(req,res)=>{
     }
 })
 
-/*
-//query get publications trough name of user 
-app.get('/users/publications/:name',async(req,res)=>{
+
+//query get publications trough complete email of user 
+app.get('/users/publications/:email',async(req,res)=>{
     try{
        
-
-        const snapshot = await admin.firestore().collection('users');
-        const comentarios = [];
+         //obtengo snap de email
+        const snapshot = await admin.firestore().collection('users').where("email","==",req.params.email);
+        const publications = [];
         const users = [];
+        // obtengo array de usuarios con ese email
+        await snapshot.get().then((snap)=>{
 
-        await snapshot.get().then((snapshot) =>{
-            snapshot.forEach((doc) => {
-            const name = doc.data().fullName;
-
-            if(name.toLowerCase().includes(req.params.nombre.toLowerCase())){
+            snap.forEach((doc) => {
                 const id = doc.id;
-                const coments = admin.firestore().collection('publicacions').where("uid","==",id).get();
-                coments.then((snap)=>{
-                    const id = doc.id;
-                    const data = doc.data();
-                    comentarios.push({ id, ...data });
-                }) 
- 
-            }
+                const data = doc.data();
+                users.push({ id, ...data });
+            });
 
+        })
+        // obtengo el primer resultado solo debería arrojar uno ya que el uid esta realacionado con el email
+        const usuario = users[0];
+        console.log(usuario.id);//hasta aquí funciona bien 
+
+        //busco las publicaciones de ese usuario // no encuentra publicaciones por uid
+        const resultado = await admin.firestore().collection('publications').where("uid","==",usuario.id);
+        await resultado.get().then((snap)=>{
+            snap.forEach((doc)=>{
+                const id = doc.id;
+                const data = doc.data();
+                publications.push({id, ...data});
             })
-          
-        });
-
-
-       
-        res.status(200).send(comentarios);
+        })
+        console.log(publications)
+        res.status(200).send(publications);
 
     }catch(error){
         console.log(error);
@@ -130,7 +132,7 @@ app.get('/users/publications/:name',async(req,res)=>{
 });
 
 
-*/
+
 
 
 //get users from ..to 
