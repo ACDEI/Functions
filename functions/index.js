@@ -197,6 +197,14 @@ app.post("/users/", async (req, res) => {
          if(resultado == null){
             const user = req.body;
             await admin.firestore().collection("users").add(user);
+            await admin.firestore().collection('users').doc(user.uid).set({
+                email: user.email,
+                fullName: user.fullName,
+                isAdmin:user.isAdmin,
+                nickName: user.nickName,
+                photoURL: user.photoURL,
+                uid: user.uid 
+            })
             res.status(200).send("Usuario insertado enn BBDD");
          }else {
             res.status(400).send("Usuario ID ya se encuentra en BBDD");
