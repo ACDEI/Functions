@@ -244,26 +244,50 @@ app.delete("/users/:id", async (req, res) => {
 
 //-------------------------------------------------------------------------Publication Functions--------------------------------------------------------------------------
 
-//Put publication
-app.put("/publications/", async (req, res) => {
+//POST publication
+app.post("/publications/", async (req, res) => {
     try{
-    const publication = req.body;
-    const id = publication.uid;
+       
     const pub = {
-        uid: publication.uid,
-        fotoUrl: publication.fotoUrl,
-        titulo: publication.titulo,
-        grafitero:publication.grafitero,
-        fecha:publication.fecha,
-        estado:publication.estado,
-        nLikes:publication.nLikes,
-        tematicas:publication.tematicas,
-        coordinates: new admin.firestore.GeoPoint(publication.lat, publication.lng)
+        pid: req.body.pid,
+        uid: req.body.uid,
+        photoURL: req.body.photoURL,
+        title: req.body.title,
+        graffiter: req.body.graffiter,
+        date: req.body.date,
+        state: req.body.state,
+        nLikes: req.body.nLikes,
+        themes: req.body.themes,
+        coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
     }
     
+    //await geoFirestore.collection("publications").doc(pub.pid).set(pub);
     await geoFirestore.collection("publications").add(pub);
 
-    res.status(201).send("Publication is added.");
+    res.status(201).send("Publication Created.");
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
+//Put publication
+app.put("/publications/:id", async (req, res) => {
+    try{
+
+        const publication = geoFirestore.collection('publications').doc(req.params.id);
+        await publication.update({
+            photoURL: req.body.photoURL,
+            title: req.body.title,
+            graffiter: req.body.graffiter,
+            state: req.body.state,
+            nLikes: req.body.nLikes,
+            themes: req.body.themes,
+            coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
+        })
+
+        res.status(201).send("Publication Updated.");
 
     }catch(error){
         console.log(error);
@@ -339,7 +363,7 @@ app.delete("/publications/:id", async (req, res) => {
     try{
 
         await admin.firestore().collection("publications").doc(req.params.id).delete();
-        res.status(200).send("Publication delete");
+        res.status(200).send("Publication Deleted");
 
     }catch(error){
         console.log(error);
