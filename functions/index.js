@@ -263,23 +263,27 @@ app.delete("/users/:id", async (req, res) => {
 app.post("/publications/", async (req, res) => {
     try{
        
-    const pub = {
-        pid: req.body.pid,
-        uid: req.body.uid,
-        photoURL: req.body.photoURL,
-        title: req.body.title,
-        graffiter: req.body.graffiter,
-        date: req.body.date,
-        state: req.body.state,
-        nLikes: req.body.nLikes,
-        themes: req.body.themes,
-        coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
-    }
-    
-    //await geoFirestore.collection("publications").doc(pub.pid).set(pub);
-    await geoFirestore.collection("publications").add(pub);
-
-    res.status(201).send("Publication Created.");
+        const busqueda = await admin.firestore().collection('publications').doc(req.body.pid);       
+        const resultado = (await busqueda.get()).data();
+     
+         if(resultado == null){
+            const pub = {
+                pid: req.body.pid,
+                uid: req.body.uid,
+                photoURL: req.body.photoURL,
+                title: req.body.title,
+                graffiter: req.body.graffiter,
+                date: req.body.date,
+                state: req.body.state,
+                nLikes: req.body.nLikes,
+                themes: req.body.themes,
+                coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
+            }
+            await geoFirestore.collection("publications").doc(pub.pid).set(pub);
+            res.status(200).send("Post created in DB");
+         }else {
+            res.status(400).send("PID Already Exists in DB");
+         }
 
     }catch(error){
         console.log(error);
@@ -311,13 +315,13 @@ app.put("/publications/:id", async (req, res) => {
 });
 
 //Get from tematicas
-app.get('/publications/tematicas/:tematicas',async(req,res)=>{
+app.get('/publications/tematicas/:id',async(req,res)=>{
     try{
 
         //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
-        const snapshot = await admin.firestore().collection('publications').where("tematicas","==",req.params.tematicas);
+        const snapshot = await admin.firestore().collection('publications').where("themes","array-contains",req.params.id);
         const publications = [];
-        let product = await snapshot.get().then((snap)=>{
+        await snapshot.get().then((snap)=>{
 
             snap.forEach((doc)=>{
                 const id = doc.id;
@@ -403,7 +407,7 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
     res.status(200).send(geosnap.docs);
 });
 
-//------------------------------------------------------DATOS ABIERTOS MÁLAGA
+//------------------------------------------------------DATOS ABIERTOS MÁLAGA----------------------------------------------------------------
 
 //de momento solo muestra los datos , habría que hacer diferentes consultas 
 app.get("/openData/airQuality", async(req,res)=>{
