@@ -412,15 +412,37 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
 
 //------------------------------------------------------DATOS ABIERTOS MÁLAGA----------------------------------------------------------------
 
-//de momento solo muestra los datos , habría que hacer diferentes consultas 
-app.get("/openData/airQuality", async(req,res)=>{
+//Get size of the array
+app.get("/openData/airQuality/size", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      
+        const data = await  getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json");
+
+        console.log(data.totalFeatures);
+      var length = data.totalFeatures;
+      res.status(200).send(JSON.stringify({"size": length}));
+  
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+//Get all the data
+app.get("/openData/airQuality/", async(req,res)=>{
       
     console.log("Fetching data...");
 
     try{
       getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json").then(data => {
-        console.log(data.features);
-        res.status(200).send(data.features);
+        console.log(data);
+        res.status(200).send(data);
       });
   
     }catch(error){
@@ -477,7 +499,7 @@ app.get("/openData/landmarks/size", async(req,res)=>{
 })
 
 //Get data from name of one landmark
-app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
+app.get("/openData/landmarks/dataName/:nombre", async(req,res)=>{
       
     console.log("Fetching data...");
 
@@ -504,6 +526,36 @@ app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
     }
 
 })
+
+//Get data from id of one landmark
+app.get("/openData/landmarks/data/:id", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      const data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      
+      const arr = data.features;
+      
+
+      arr.forEach(item => {
+        console.log(item);
+        if(item.properties.ID == req.params.id){
+            res.status(200).send(JSON.stringify({"properties" : item.properties,"coordinates": item.geometry.coordinates}));
+        }
+      });
+      res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
+
+            
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
 
 
 const getJSON = async url => {
