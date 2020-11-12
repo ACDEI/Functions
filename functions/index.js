@@ -1,6 +1,6 @@
 const functions = require("firebase-functions");
 const express = require("express");
-//const cors = require("cors");
+const cors = require("cors");
 var GeoFirestore = require('geofirestore').GeoFirestore;
 const admin = require("firebase-admin");
 //npm i --save cross-fetch 
@@ -8,6 +8,8 @@ const fetch = require('cross-fetch').fetch;
 admin.initializeApp();
 
 const app = express();
+
+app.use(cors({origin:true}));
 
 const db =  admin.firestore();
 
