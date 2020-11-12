@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 var GeoFirestore = require('geofirestore').GeoFirestore;
 const admin = require("firebase-admin");
+
 //npm i --save cross-fetch 
 const fetch = require('cross-fetch').fetch;
 admin.initializeApp();
@@ -418,10 +419,81 @@ app.get("/openData/airQuality", async(req,res)=>{
 
     try{
       getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json").then(data => {
+        console.log(data.features);
+        res.status(200).send(data.features);
+      });
+  
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+
+//Get list of landmarks
+app.get("/openData/landmarks", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson").then(data => {
         console.log(data);
         res.status(200).send(data);
       });
   
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+//Size of list of landmarks
+app.get("/openData/landmarks/size", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      var data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      
+
+     
+      console.log(data.totalFeatures);
+      var length = data.totalFeatures;
+      res.status(200).send(JSON.stringify({"size": length}));
+  
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+//Get data from one landmark
+app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      const data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      
+      const arr = data.features;
+      console.log(data.features)
+
+      arr.forEach(item => {
+        console.log(item);
+        if(item.properties.NOMBRE == req.params.nombre){
+            res.status(200).send(JSON.stringify({"properties" : item.properties,"coordinates": item.geometry.coordinates}));
+        }
+      });
+            
     }catch(error){
 
         console.log(error);
