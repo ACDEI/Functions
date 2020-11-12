@@ -476,7 +476,7 @@ app.get("/openData/landmarks/size", async(req,res)=>{
 
 })
 
-//Get data from one landmark
+//Get data from name of one landmark
 app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
       
     console.log("Fetching data...");
@@ -485,7 +485,7 @@ app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
       const data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
       
       const arr = data.features;
-      console.log(data.features)
+      
 
       arr.forEach(item => {
         console.log(item);
@@ -493,6 +493,8 @@ app.get("/openData/landmarks/data/:nombre", async(req,res)=>{
             res.status(200).send(JSON.stringify({"properties" : item.properties,"coordinates": item.geometry.coordinates}));
         }
       });
+      res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
+
             
     }catch(error){
 
