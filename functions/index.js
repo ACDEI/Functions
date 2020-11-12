@@ -2,8 +2,9 @@ const functions = require("firebase-functions");
 const express = require("express");
 //const cors = require("cors");
 var GeoFirestore = require('geofirestore').GeoFirestore;
-
 const admin = require("firebase-admin");
+//npm i --save cross-fetch 
+const fetch = require('cross-fetch').fetch;
 admin.initializeApp();
 
 const app = express();
@@ -401,6 +402,45 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
 
     res.status(200).send(geosnap.docs);
 });
+
+//------------------------------------------------------DATOS ABIERTOS MÁLAGA
+
+//de momento solo muestra los datos , habría que hacer diferentes consultas 
+app.get("/openData/airQuality", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json").then(data => {
+        console.log(data);
+        res.status(200).send(data);
+      });
+  
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+
+const getJSON = async url => {
+    try {
+        const response = await fetch(url);
+        if(!response.ok){ // check if response worked (no 404 errors etc...)
+            throw new Error(response.statusText);
+        }
+        const data = await response.json(); // get JSON from the response
+        return data; // returns a promise, which resolves to this data value
+    } catch(error) {
+      return error;
+    }
+  }
+
+
+
 
 //-------------------------------------------------------------------------EXPORT--------------------------------------------------------------------------
 
