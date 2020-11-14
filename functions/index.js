@@ -17,6 +17,7 @@ const db =  admin.firestore();
 // Create a GeoFirestore reference
 const geoFirestore = new GeoFirestore(db);
 
+
 //-------------------------------------------------------------------------USER Functions--------------------------------------------------------------------------
 
 //get users
@@ -37,8 +38,6 @@ app.get("/users/", async (req, res) => {
         res.status(500).send(error);
     }
 });
-
-
 
 
 //query search user for name
@@ -265,28 +264,24 @@ app.delete("/users/:id", async (req, res) => {
 //POST publication
 app.post("/publications/", async (req, res) => {
     try{
-       
-        const busqueda = await admin.firestore().collection('publications').doc(req.body.pid);       
-        const resultado = (await busqueda.get()).data();
-     
-         if(resultado == null){
-            const pub = {
-                pid: req.body.pid,
-                uid: req.body.uid,
-                photoURL: req.body.photoURL,
-                title: req.body.title,
-                graffiter: req.body.graffiter,
-                date: req.body.date,
-                state: req.body.state,
-                nLikes: req.body.nLikes,
-                themes: req.body.themes,
-                coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
-            }
-            await geoFirestore.collection("publications").doc(pub.pid).set(pub);
+
+        if(req.body.uid != undefined && req.body.lat != undefined && req.body.lng != undefined){
+            const coordinates = new admin.firestore.GeoPoint(req.body.lat, req.body.lng);
+            const data = req.body;
+
+            delete data.lat;
+            delete data.lng;
+
+            const coord = {coordinates: coordinates};
+
+            const dataF = {...data, ...coord};
+
+            await geoFirestore.collection("publications").add(dataF);
+
             res.status(200).send("Post created in DB");
-         }else {
-            res.status(400).send("PID Already Exists in DB");
-         }
+        }else{
+            res.status(400).send("Missing fields (uid, lat, lng)");
+        }
 
     }catch(error){
         console.log(error);
@@ -393,12 +388,39 @@ app.delete("/publications/:id", async (req, res) => {
     }
 });
 
+//get publicaciones por el nombre del autor
+app.get("/publications/autor/:nombre", async (req, res) => {
+    try{
+
+        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        const snapshot = await admin.firestore().collection('publications').where("graffiter","==",req.params.nombre);
+        const publications = [];
+        await snapshot.get().then((snap)=>{
+
+            snap.forEach((doc)=>{
+                const id = doc.id;
+                const data = doc.data();
+                publications.push({id, ...data});
+            })
+
+        });
+        
+        res.status(200).send(publications);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
 
 //Query publicaciones cercanas a un punto
 app.get("/near/:lat&:lng&:dist", async (req, res) => {
     const lat = Number(req.params.lat);
     const lng = Number(req.params.lng);
     const dist = Number(req.params.dist);
+
+    date = new admin.firestore.Timestamp()
 
     const geoPhotos = geoFirestore.collection("publications").near({
         center: new admin.firestore.GeoPoint(lat,lng),
@@ -412,6 +434,8 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
 
 //------------------------------------------------------DATOS ABIERTOS MÁLAGA----------------------------------------------------------------
 
+var airQualityURL = "https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json";
+
 //Get size of the array
 app.get("/openData/airQuality/size", async(req,res)=>{
       
@@ -419,7 +443,7 @@ app.get("/openData/airQuality/size", async(req,res)=>{
 
     try{
       
-        const data = await  getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json");
+        const data = await  getJSON();
 
         console.log(data.totalFeatures);
       var length = data.totalFeatures;
@@ -440,7 +464,7 @@ app.get("/openData/airQuality/", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      getJSON("https://datosabiertos.malaga.eu/recursos/ambiente/calidadaire/calidadaire.json").then(data => {
+      getJSON(airQualityURL).then(data => {
         console.log(data);
         res.status(200).send(data);
       });
@@ -454,6 +478,76 @@ app.get("/openData/airQuality/", async(req,res)=>{
 
 })
 
+//Devuelve los datos de la zona en la que estas
+app.get("/openData/airQuality/in/:lat&:lng", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      const data =await getJSON(airQualityURL);
+      
+      const arr = data.features;
+      
+        const lat = Number(req.params.lat);
+        const lng = Number(req.params.lng);
+
+        var resultado = [];
+
+      arr.forEach(item => {
+        const coords0 = item.geometry.coordinates[0][0];
+        const coords1 = item.geometry.coordinates[0][2];
+        
+        if(between(coords0[0],coords1[0],lng) && between(coords0[1],coords1[1],lat)){
+            res.status(200).send(item);
+        }
+
+      });
+
+      res.status(400).send("No hay datos en tu zona");
+            
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+//Devuelve las zonas dependiendo de la calidad de CO
+app.get("/openData/airQuality/dataCO/:calidad", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      const data =await getJSON(airQualityURL);
+      
+      const arr = data.features;
+      
+      const resultado = []
+
+      arr.forEach(item => {
+        if(item.properties.co_level == req.params.calidad){
+            resultado.push(item);
+        }
+      });
+
+      if(resultado.length == 0){
+        res.status(400).send("No se ha encontrado ninguno");
+      }else{
+        res.status(200).send(resultado);
+      }
+
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+var monumentosURL = "https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson";
 
 //Get list of landmarks
 app.get("/openData/landmarks", async(req,res)=>{
@@ -461,7 +555,7 @@ app.get("/openData/landmarks", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson").then(data => {
+      getJSON(monumentosURL).then(data => {
         console.log(data);
         res.status(200).send(data);
       });
@@ -481,7 +575,7 @@ app.get("/openData/landmarks/size", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      var data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      var data =await getJSON(monumentosURL);
       
 
      
@@ -504,7 +598,7 @@ app.get("/openData/landmarks/dataName/:nombre", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      const data =await getJSON(monumentosURL);
       
       const arr = data.features;
       
@@ -533,7 +627,7 @@ app.get("/openData/landmarks/data/:id", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON("https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson");
+      const data =await getJSON(monumentosURL);
       
       const arr = data.features;
       
@@ -556,6 +650,61 @@ app.get("/openData/landmarks/data/:id", async(req,res)=>{
 
 })
 
+//Get landmark near a coordinate
+app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res)=>{
+      
+    console.log("Fetching data...");
+
+    try{
+      const data =await getJSON(monumentosURL);
+      
+      const arr = data.features;
+      
+        const lat = Number(req.params.lat);
+        const lng = Number(req.params.lng);
+        const dist = Number(req.params.dist);
+
+        var resultado = [];
+
+      arr.forEach(item => {
+        const coords = item.geometry.coordinates;
+        const distancia = measure(Number(coords[1]),Number(coords[0]),lat,lng);
+
+        if(distancia <= dist){
+            resultado.push(item);
+        }
+
+      });
+
+      res.status(200).send(resultado);
+            
+    }catch(error){
+
+        console.log(error);
+        res.status(500).send(error);
+
+    }
+
+})
+
+function between(n1, n2, pos){
+    let nMenor = n1>n2 ? n2:n1, nMayor = n1>n2 ? n1:n2;
+
+    return nMenor <= pos && nMayor >= pos;
+}
+
+function measure(lat1, lon1, lat2, lon2){  // generally used geo measurement function
+    var R = 6378.137; // Radius of earth in KM
+    var dLat = lat2 * Math.PI / 180 - lat1 * Math.PI / 180;
+    var dLon = lon2 * Math.PI / 180 - lon1 * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    var d = R * c;
+    return d * 1000; // meters
+}
+
 
 
 const getJSON = async url => {
@@ -570,9 +719,6 @@ const getJSON = async url => {
       return error;
     }
   }
-
-
-
 
 //-------------------------------------------------------------------------EXPORT--------------------------------------------------------------------------
 
