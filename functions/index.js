@@ -144,7 +144,11 @@ app.get('/users/from/:from/:to',async(req,res)=>{
 
         const from = Number(req.params.from);
         const to = Number(req.params.to);
-        const snapshot = await admin.firestore().collection("users").offset(from).limit(to).get();
+        var result = to-from; 
+
+    if(result >= 0){
+        result++;
+        const snapshot = await admin.firestore().collection("users").offset(from).limit(result).get();
         const users = [];
         snapshot.forEach((doc) => {
             const id = doc.id;
@@ -152,6 +156,10 @@ app.get('/users/from/:from/:to',async(req,res)=>{
             users.push({ id, ...data });
         });
         res.status(200).send(users);
+
+    }else{
+        res.status(400).send("From higher than to");
+    }
 
     }catch(error){
         console.log(error);
@@ -355,6 +363,40 @@ app.get("/publications/count", async (req, res) => {
     }
 });
 
+
+
+//get users from ..to 
+app.get('/publications/from/:from/:to',async(req,res)=>{
+    try{
+
+        const from = Number(req.params.from);
+        const to = Number(req.params.to);
+        var result = to-from; 
+
+    if(result >= 0){
+        result++;
+        const snapshot = await admin.firestore().collection("publications").offset(from).limit(result).get();
+        const publications = [];
+        snapshot.forEach((doc) => {
+            const id = doc.id;
+            const data = doc.data();
+            publications.push({ id, ...data });
+        });
+        res.status(200).send(publications);
+
+    }else{
+        res.status(400).send("From higher than to");
+    }
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+})
+
+
+
+
 //get list of publications
 app.get("/publications/", async (req, res) => {
     try {
@@ -420,7 +462,7 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
     const lng = Number(req.params.lng);
     const dist = Number(req.params.dist);
 
-    date = new admin.firestore.Timestamp()
+    //date = new admin.firestore.Timestamp()
 
     const geoPhotos = geoFirestore.collection("publications").near({
         center: new admin.firestore.GeoPoint(lat,lng),
@@ -443,10 +485,10 @@ app.get("/openData/airQuality/size", async(req,res)=>{
 
     try{
       
-        const data = await  getJSON();
-
-        console.log(data.totalFeatures);
+      const data = await  getJSON(airQualityURL);
+      console.log(data.totalFeatures);
       var length = data.totalFeatures;
+      console.log(length);
       res.status(200).send(JSON.stringify({"size": length}));
   
     }catch(error){
