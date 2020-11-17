@@ -202,6 +202,7 @@ app.post("/users/", async (req, res) => {
 
     try{
 
+        console.log(req.body.uid);
         const busqueda = await admin.firestore().collection("users").doc(req.body.uid);       
         const resultado = (await busqueda.get()).data();
      
@@ -290,8 +291,15 @@ app.delete("/users/:id", async (req, res) => {
 app.post("/publications/", async (req, res) => {
     try{
 
-        if(req.body.uid != undefined && req.body.lat != undefined && req.body.lng != undefined){
-            const coordinates = new admin.firestore.GeoPoint(req.body.lat, req.body.lng);
+        var result = await admin.firestore().collection('users').doc(req.body.uid);
+        var usuario = (await result.get()).data(); 
+
+        if(usuario != null && req.body.lat != null && req.body.lng != null){
+
+            const lat =  Number(req.body.lat); 
+            const lng = Number(req.body.lng);
+
+            const coordinates = new admin.firestore.GeoPoint(lat,lng);
             const data = req.body;
 
             delete data.lat;
