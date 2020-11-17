@@ -252,6 +252,10 @@ app.delete("/users/:id", async (req, res) => {
 
     try{
 
+        var result = await admin.firestore().collection('users').doc(req.params.id);
+        var usuario = (await result.get()).data(); 
+        
+    if(usuario != null){
  
         var publications = admin.firestore().collection('publications').where("uid","==",req.params.id);
 
@@ -261,8 +265,12 @@ app.delete("/users/:id", async (req, res) => {
 
         })
 
-        await admin.firestore().collection("users").doc(req.params.id).delete();
+        await result.delete();
+    
         res.status(200).send("User delete");
+    }else {
+        res.status(400).send("This id not exists");
+    }
 
     }catch(error){
         console.log(error);
