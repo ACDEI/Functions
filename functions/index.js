@@ -252,6 +252,15 @@ app.delete("/users/:id", async (req, res) => {
 
     try{
 
+ 
+        var publications = admin.firestore().collection('publications').where("uid","==",req.params.id);
+
+        (await publications.get()).forEach((publi)=>{
+
+            admin.firestore().collection('publications').doc(publi.id).delete();
+
+        })
+
         await admin.firestore().collection("users").doc(req.params.id).delete();
         res.status(200).send("User delete");
 
