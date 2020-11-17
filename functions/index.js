@@ -299,17 +299,20 @@ app.post("/publications/", async (req, res) => {
             const lat =  Number(req.body.lat); 
             const lng = Number(req.body.lng);
 
-            const coordinates = new admin.firestore.GeoPoint(lat,lng);
-            const data = req.body;
+            await geoFirestore.collection('publications').doc(req.body.pid).set({
+                date: req.body.date ,
+                graffiter: req.body.graffiter,
+                nLikes: req.body.nLikes,
+                photoURL: req.body.photoURL,
+                pid: req.body.pid,
+                state: req.body.state,
+                themes: req.body.themes,
+                title: req.body.title,
+                uid:req.body.uid,
+                coordinates:new admin.firestore.GeoPoint(lat,lng)
+            })
 
-            delete data.lat;
-            delete data.lng;
 
-            const coord = {coordinates: coordinates};
-
-            const dataF = {...data, ...coord};
-
-            await geoFirestore.collection("publications").add(dataF);
 
             res.status(200).send("Post created in DB");
         }else{
