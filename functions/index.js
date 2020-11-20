@@ -352,7 +352,7 @@ app.put("/publications/:id", async (req, res) => {
 app.get('/publications/tematicas/:id',async(req,res)=>{
     try{
 
-        //const snapshot = await admin.firestore().collection('users').where("fullName","==",req.params.nombre);
+        //const snapshot = await admin.firestore().collection('publications').where("themes","==",req.params.id);
         const snapshot = await admin.firestore().collection('publications').where("themes","array-contains",req.params.id);
         const publications = [];
         await snapshot.get().then((snap)=>{
