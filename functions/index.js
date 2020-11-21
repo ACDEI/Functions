@@ -66,7 +66,7 @@ app.get('/users/nombre/:nombre',async(req,res)=>{
           
         });
         });
-        console.log(product);
+        
         res.status(200).send(users);
 
     }catch(error){
@@ -92,7 +92,7 @@ app.get('/users/email/:email',async(req,res)=>{
             }
         });
         });
-        console.log(product);
+       
         res.status(200).send(users);
 
     }catch(error){
@@ -122,7 +122,7 @@ app.get('/users/publications/:email',async(req,res)=>{
         })
         // obtengo el primer resultado solo debería arrojar uno ya que el uid esta realacionado con el email
         const usuario = users[0];
-        console.log(usuario.id);//hasta aquí funciona bien 
+        
 
         //busco las publicaciones de ese usuario // no encuentra publicaciones por uid
         const resultado = await admin.firestore().collection('publications').where("uid","==",usuario.id);
@@ -133,7 +133,7 @@ app.get('/users/publications/:email',async(req,res)=>{
                 publications.push({id, ...data});
             })
         })
-        console.log(publications)
+    
         res.status(200).send(publications);
 
     }catch(error){
@@ -210,7 +210,7 @@ app.post("/users/", async (req, res) => {
 
     try{
 
-        console.log(req.body.uid);
+     
         const busqueda = await admin.firestore().collection("users").doc(req.body.uid);       
         const resultado = (await busqueda.get()).data();
      
@@ -347,7 +347,6 @@ app.put("/publications/:id", async (req, res) => {
         }
 
 
-        console.log(req.body);
 
         await publication.update(req.body); 
 
@@ -663,7 +662,6 @@ app.get("/openData/landmarks", async(req,res)=>{
     try{
         
         await refreshMonuments();
-        console.log("---------->" + jsonMonuments);
         res.status(200).send(jsonMonuments);
 
     }catch(error){
@@ -685,7 +683,6 @@ function diferenciaFecha(d1,d2){
 
 const diffTime = Math.abs(d2 - d1);
 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-console.log(diffDays);
 return diffDays; 
 
 }
