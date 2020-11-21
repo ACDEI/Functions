@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 var GeoFirestore = require('geofirestore').GeoFirestore;
 const admin = require("firebase-admin");
+const { ref } = require("firebase-functions/lib/providers/database");
 
 //npm i --save cross-fetch 
 const fetch = require('cross-fetch').fetch;
@@ -16,6 +17,13 @@ const db =  admin.firestore();
 
 // Create a GeoFirestore reference
 const geoFirestore = new GeoFirestore(db);
+
+// archivos Json
+var jsonMonuments = null;
+var jsonAirQuality = null;
+var dateMonuments = null;
+var dateAirQuality = null; 
+
 
 
 //-------------------------------------------------------------------------USER Functions--------------------------------------------------------------------------
@@ -330,17 +338,20 @@ app.put("/publications/:id", async (req, res) => {
     try{
 
         const publication = geoFirestore.collection('publications').doc(req.params.id);
-        await publication.update({
-            photoURL: req.body.photoURL,
-            title: req.body.title,
-            graffiter: req.body.graffiter,
-            state: req.body.state,
-            nLikes: req.body.nLikes,
-            themes: req.body.themes,
-            coordinates: new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
-        })
+        
+        if(req.body.lat != null && req.body.lng != null){
+             const coord = new admin.firestore.GeoPoint(req.body.lat, req.body.lng)
+             req.body["coordinates"] = coord;
+             delete req.body.lat
+             delete req.body.lng
+        }
 
-        res.status(201).send("Publication Updated.");
+
+        console.log(req.body);
+
+        await publication.update(req.body); 
+
+        res.status(200).send("Publication Updated.");
 
     }catch(error){
         console.log(error);
@@ -366,6 +377,34 @@ app.get('/publications/tematicas/:id',async(req,res)=>{
         });
         
         res.status(200).send(publications);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+    
+    
+})
+
+
+//Get all tematicas
+app.get('/themes/',async(req,res)=>{
+    try{
+
+        //const snapshot = await admin.firestore().collection('publications').where("themes","==",req.params.id);
+        const snapshot = await admin.firestore().collection('themes');
+        const themes = [];
+        await snapshot.get().then((snap)=>{
+
+            snap.forEach((doc)=>{
+                const id = doc.id;
+                const data = doc.data();
+                themes.push({id, ...data});
+            })
+
+        });
+        
+        res.status(200).send(themes);
 
     }catch(error){
         console.log(error);
@@ -513,11 +552,8 @@ app.get("/openData/airQuality/size", async(req,res)=>{
 
     try{
       
-      const data = await  getJSON(airQualityURL);
-      console.log(data.totalFeatures);
-      var length = data.totalFeatures;
-      console.log(length);
-      res.status(200).send(JSON.stringify({"size": length}));
+      await refreshAirQuality();
+      res.status(200).send({"size": jsonAirQuality.length});
   
     }catch(error){
 
@@ -534,10 +570,9 @@ app.get("/openData/airQuality/", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      getJSON(airQualityURL).then(data => {
-        console.log(data);
-        res.status(200).send(data);
-      });
+
+      await refreshAirQuality();
+      res.status(200).send(jsonAirQuality);
   
     }catch(error){
 
@@ -554,26 +589,28 @@ app.get("/openData/airQuality/in/:lat&:lng", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON(airQualityURL);
-      
-      const arr = data.features;
-      
-        const lat = Number(req.params.lat);
-        const lng = Number(req.params.lng);
 
-        var resultado = [];
+      await refreshAirQuality();
+      const lat = Number(req.params.lat);
+      const lng = Number(req.params.lng);
+      var cont = 0; 
+      var encontrado = false; 
+      var item = null; 
+      while(!encontrado && cont < jsonAirQuality.length){
+        item = jsonAirQuality[cont];
 
-      arr.forEach(item => {
-        const coords0 = item.geometry.coordinates[0][0];
-        const coords1 = item.geometry.coordinates[0][2];
-        
-        if(between(coords0[0],coords1[0],lng) && between(coords0[1],coords1[1],lat)){
-            res.status(200).send(item);
+        if(between(item.zone[0]._longitude,item.zone[1]._longitude,lng) && between(item.zone[0]._latitude,item.zone[1]._latitude,lat)){
+            encontrado = true; 
         }
 
-      });
+        cont++;
+      }
 
-      res.status(400).send("No hay datos en tu zona");
+      if(encontrado){
+        res.status(200).send(item);
+      }else{
+        res.status(400).send("ZONE NOT FOUND");
+      }
             
     }catch(error){
 
@@ -590,14 +627,12 @@ app.get("/openData/airQuality/dataCO/:calidad", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON(airQualityURL);
-      
-      const arr = data.features;
-      
+
+      await refreshAirQuality();
       const resultado = []
 
-      arr.forEach(item => {
-        if(item.properties.co_level == req.params.calidad){
+      jsonAirQuality.forEach(item => {
+        if(item.co_level == req.params.calidad){
             resultado.push(item);
         }
       });
@@ -619,17 +654,18 @@ app.get("/openData/airQuality/dataCO/:calidad", async(req,res)=>{
 
 var monumentosURL = "https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson";
 
+
 //Get list of landmarks
 app.get("/openData/landmarks", async(req,res)=>{
       
     console.log("Fetching data...");
 
     try{
-      getJSON(monumentosURL).then(data => {
-        console.log(data);
-        res.status(200).send(data);
-      });
-  
+        
+        await refreshMonuments();
+        console.log("---------->" + jsonMonuments);
+        res.status(200).send(jsonMonuments);
+
     }catch(error){
 
         console.log(error);
@@ -639,20 +675,31 @@ app.get("/openData/landmarks", async(req,res)=>{
 
 })
 
+
+
+
+
+
+
+function diferenciaFecha(d1,d2){
+
+const diffTime = Math.abs(d2 - d1);
+const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+console.log(diffDays);
+return diffDays; 
+
+}
+
 //Size of list of landmarks
 app.get("/openData/landmarks/size", async(req,res)=>{
       
     console.log("Fetching data...");
 
     try{
-      var data =await getJSON(monumentosURL);
-      
 
-     
-      console.log(data.totalFeatures);
-      var length = data.totalFeatures;
-      res.status(200).send(JSON.stringify({"size": length}));
-  
+        await refreshMonuments();
+        res.status(200).send({"size":jsonMonuments.length});
+ 
     }catch(error){
 
         console.log(error);
@@ -668,20 +715,29 @@ app.get("/openData/landmarks/dataName/:nombre", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON(monumentosURL);
-      
-      const arr = data.features;
-      
 
-      arr.forEach(item => {
-        console.log(item);
-        if(item.properties.NOMBRE == req.params.nombre){
-            res.status(200).send(JSON.stringify({"properties" : item.properties,"coordinates": item.geometry.coordinates}));
+      await refreshMonuments();
+      var cont = 0; 
+      var encontrado = false; 
+      var item = null; 
+      while(!encontrado && cont < jsonMonuments.length){
+        item = jsonMonuments[cont];
+
+        if(item.name == req.params.nombre){
+            encontrado = true;  
         }
-      });
-      res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
 
-            
+        cont++;
+      }
+
+      if(encontrado){
+        res.status(200).send(item);
+      }else{
+        res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
+      }
+
+
+      
     }catch(error){
 
         console.log(error);
@@ -697,19 +753,26 @@ app.get("/openData/landmarks/data/:id", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON(monumentosURL);
       
-      const arr = data.features;
-      
+      await refreshMonuments();
+      var cont = 0; 
+      var encontrado = false; 
+      var item = null; 
+      while(!encontrado && cont < jsonMonuments.length){
+        item = jsonMonuments[cont];
 
-      arr.forEach(item => {
-        console.log(item);
-        if(item.properties.ID == req.params.id){
-            res.status(200).send(JSON.stringify({"properties" : item.properties,"coordinates": item.geometry.coordinates}));
+        if(item.id == req.params.id){
+            encontrado = true;  
         }
-      });
-      res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
 
+        cont++;
+      }
+
+      if(encontrado){
+        res.status(200).send(item);
+      }else{
+        res.status(400).send(JSON.stringify("LANDMARK NOT FOUND"));
+      }
             
     }catch(error){
 
@@ -726,19 +789,18 @@ app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res)=>{
     console.log("Fetching data...");
 
     try{
-      const data =await getJSON(monumentosURL);
-      
-      const arr = data.features;
-      
+
+        await refreshMonuments();
+
         const lat = Number(req.params.lat);
         const lng = Number(req.params.lng);
         const dist = Number(req.params.dist);
 
         var resultado = [];
 
-      arr.forEach(item => {
-        const coords = item.geometry.coordinates;
-        const distancia = measure(Number(coords[1]),Number(coords[0]),lat,lng);
+      jsonMonuments.forEach(item => {
+        const coords = item.coordinates;
+        const distancia = measure(Number(coords._latitude),Number(coords._longitude),lat,lng);
 
         if(distancia <= dist){
             resultado.push(item);
@@ -789,6 +851,52 @@ const getJSON = async url => {
       return error;
     }
   }
+
+  async function refreshMonuments(){
+
+    if(jsonMonuments == null || dateMonuments == null || diferenciaFecha(dateMonuments, new Date()) > 30){
+            jsonMonuments = []; 
+            dateMonuments = new Date();
+            await getJSON(monumentosURL).then(data => {
+                data.features.forEach(element => {
+
+                    let coordinates = new admin.firestore.GeoPoint( element.geometry.coordinates[1], element.geometry.coordinates[0]);
+                    let id = element.properties.ID; 
+                    let nombre = element.properties.NOMBRE; 
+                    jsonMonuments.push({"id": id, "name":nombre, "coordinates": coordinates});
+                  
+                });
+
+            });
+    }
+}
+
+
+
+async function refreshAirQuality(){
+
+    if(jsonAirQuality == null || dateAirQuality == null || diferenciaFecha(dateAirQuality, new Date()) > 30){
+            jsonAirQuality = []; 
+            dateAirQuality = new Date();
+            await getJSON(airQualityURL).then(data => {
+                data.features.forEach(element => {
+
+                    let zone =  [
+                        new admin.firestore.GeoPoint( element.geometry.coordinates[0][0][1],
+                             element.geometry.coordinates[0][0][0]),
+                             new admin.firestore.GeoPoint(element.geometry.coordinates[0][2][1],
+                             element.geometry.coordinates[0][2][0])];
+
+                    let co_level = element.properties.co_level; 
+                    let pm1_level = element.properties.pm1_level; 
+                    let no2_level = element.properties.no2_level; 
+                    jsonAirQuality.push({"co_level": co_level, "zone": zone , "pm1_level":pm1_level, "no2_level":no2_level});
+                  
+                });
+
+            });
+    }
+}
 
 //-------------------------------------------------------------------------EXPORT--------------------------------------------------------------------------
 
