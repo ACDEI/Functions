@@ -535,9 +535,14 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {
         radius: dist
     })
 
-    const geosnap = await geoPhotos.get();
+    list = [];
 
-    res.status(200).send(geosnap.docs);
+    (await geoPhotos.get()).docs.forEach( doc => {
+        j = {...doc, ...doc.data()};
+        list.push(j);
+    });
+
+    res.status(200).send(list);
 });
 
 //------------------------------------------------------DATOS ABIERTOS MÁLAGA----------------------------------------------------------------
