@@ -287,6 +287,40 @@ app.delete("/users/:id", async (req, res) => {
     }
 });
 
+//Get user's followers from an user uid
+app.get('/users/followers/:uid', async(req,res)=>{
+    try {
+        const snapshot = await admin.firestore().collection('users').doc(req.params.uid).collection('followers').get();
+        const followers = [];
+        snapshot.forEach((doc) => {
+            const id = doc.id;
+            const data = doc.data();
+            users.push({ id, ...data });
+        });
+        res.status(200).send(followers);
+    } catch(error) {
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
+//Get user's followed from an user uid
+app.get('/users/followed/:uid', async(req,res)=>{
+    try {
+        const snapshot = await admin.firestore().collection('users').doc(req.params.uid).collection('followed').get();
+        const followed = [];
+        snapshot.forEach((doc) => {
+            const id = doc.id;
+            const data = doc.data();
+            users.push({ id, ...data });
+        });
+        res.status(200).send(followed);
+    } catch(error) {
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
 ///QUERY OPERATIONS 
 
 /// query for user 
