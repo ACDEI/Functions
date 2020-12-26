@@ -821,6 +821,31 @@ app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res)=>{
 
 })
 
+
+var weatherURL = "http://api.openweathermap.org/data/2.5/weather?q=M%C3%A1laga&appid=f999cf50cb6f6117a41d2d625c6ba902"
+//WEATHER API
+app.get("/openWeatherMap/weather", async(req,res)=>{
+
+    console.log("Fetching data...");
+
+    try{
+
+        await getJSON(weatherURL).then(data => {
+            res.status(200).send(data);
+        });
+
+
+    }catch(error){
+
+            console.log(error);
+            res.status(500).send(error);
+    
+    }    
+
+
+});
+
+
 function between(n1, n2, pos){
     let nMenor = n1>n2 ? n2:n1, nMayor = n1>n2 ? n1:n2;
 
