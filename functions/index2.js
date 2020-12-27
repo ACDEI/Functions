@@ -327,8 +327,8 @@ app.delete(users + ":uid", async (req, res) => {
             });
 
             //Borro al usuario de sus Likes
-            usrL.forEach(pid => {
-                await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uid).delete();
+            await usrL.forEach(pid => {
+                admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uid).delete();
             });
 
             /*
@@ -343,8 +343,8 @@ app.delete(users + ":uid", async (req, res) => {
            });
 
            //Borro al usuario de sus Seguidos
-           usrFw.forEach(uidFw => {
-               await admin.firestore().collection(col_users).doc(uidFw).collection(col_followed).doc(uid).delete();
+           await usrFw.forEach(uidFw => {
+               admin.firestore().collection(col_users).doc(uidFw).collection(col_followed).doc(uid).delete();
            });
 
             /*
@@ -359,8 +359,8 @@ app.delete(users + ":uid", async (req, res) => {
            });
 
            //Borro al usuario de sus Seguidores
-           usrFw.forEach(uidFd => {
-               await admin.firestore().collection(col_users).doc(uidFd).collection(col_followers).doc(uid).delete();
+           await usrFw.forEach(uidFd => {
+               admin.firestore().collection(col_users).doc(uidFd).collection(col_followers).doc(uid).delete();
            });
 
             /*
@@ -368,8 +368,8 @@ app.delete(users + ":uid", async (req, res) => {
             */
            //Cojo Todos Los Comments del User
            const userComments = await admin.firestore().collection(col_comments).where('uid', '==', uid).get();
-           userComments.forEach(doc => {
-               await doc.delete();
+           await userComments.forEach(doc => {
+               doc.delete();
            });
 
             /*
@@ -1031,8 +1031,8 @@ app.put(pubs + ":pid", async (req, res) => {
             });
 
             //Actualizar Likes de User
-            users.forEach(doc => {
-                const liked = await admin.firestore().collection(col_users).doc(doc).collection(likes).doc(pid).set({
+            await users.forEach(doc => {
+                const liked = admin.firestore().collection(col_users).doc(doc).collection(likes).doc(pid).set({
                     pid: liked.pid,
                     title: req.body.title,
                     upl_uid: liked.upl_uid,
@@ -1109,18 +1109,18 @@ app.delete(pubs + ":pid", async (req, res) => {
                     users.push(uid);
                 });
 
-                users.forEach(uid => {
-                    await admin.firestore().collection(col_users).doc(uid).collection(col_likes).doc(pid).delete();
+                await users.forEach(uid => {
+                    admin.firestore().collection(col_users).doc(uid).collection(col_likes).doc(pid).delete();
                 });
 
             //Borrar Comentarios de la Imagen
                 const commentsPub = await admin.firestore().collection(col_comments).where('pid', '==', pid).get();
-                commentsPub.forEach(doc => {
-                    await doc.delete();
+                await commentsPub.forEach(doc => {
+                    doc.delete();
                 });
 
             //Borrar Publicacion
-            const userLikes = await admin.firestore().collection(col_pubs).doc(pid).delete();
+            await admin.firestore().collection(col_pubs).doc(pid).delete();
 
             res.status(200).send("Publication Updated.");
             
@@ -1530,7 +1530,7 @@ app.put(themes + ':tid', async(req, res) => {    //Update A Theme
 });
 
 // POST - WRITE
-app.post(comments, async(req, res) => {    //Post A Theme
+app.post(themes, async(req, res) => {    //Post A Theme
 
     try{
 
