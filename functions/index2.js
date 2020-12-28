@@ -275,6 +275,89 @@ app.post(users, async(req, res) => {
 
         if(exists == null) {
             const user = req.body;
+
+            /*
+                ACTUALIZAR LIKES DEL USUARIO
+            */
+
+            //Cojo Todos Los Likes del User -> Para sus Likes
+            const userLikes = await admin.firestore().collection(col_users).doc(uid).collection(col_likes).get();
+            const usrL = [];
+            userLikes.forEach(doc => {
+                var pid = doc.data();   //Id de Pub que tiene Like
+                usrL.push(pid);
+            });
+
+            //Actualizo al usuario de sus Likes
+            await usrL.forEach(pidd => {
+                admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uid).set({
+                    pid: pidd.pid,
+                    title: pidd.title,
+                    upl_uid: pidd.upl_uid,
+                    upl_nick: user.nickName,
+                    image: pidd.image
+                });
+            });
+
+            /*
+                ACTUALIZAR SEGUIDORES DEL USUARIO
+            */
+           //Cojo Todos Los Followers del User -> User es SEGUIDO por ellos
+           const userFollowers = await admin.firestore().collection(col_users).doc(uid).collection(col_followers).get();
+           const usrFw = [];
+           userFollowers.forEach(doc => {
+               var uidFw = doc.data();   //Id de Usr que le Sigue
+               usrFw.push(uidFw);
+           });
+
+           //Actualizo al usuario de sus Seguidos
+           await usrFw.forEach(uidFw => {
+               admin.firestore().collection(col_users).doc(uidFw).collection(col_followed).doc(uid).set({
+                    uid: uidFw.uid,
+                    nick: user.nickName,
+                    image: uidFw.image
+               });
+           });
+
+            /*
+                ACTUALIZAR SEGUIDOS DEL USUARIO
+            */
+           //Cojo Todos Los Followed del User -> User es SEGUIDOR de ellos
+           const userFollowed = await admin.firestore().collection(col_users).doc(uid).collection(col_followed).get();
+           const usrFd = [];
+           userFollowed.forEach(doc => {
+               var uidFd = doc.data();   //Id de Usr que le Sigue
+               usrFd.push(uidFd);
+           });
+
+           //Borro al usuario de sus Seguidores
+           await usrFw.forEach(uidFd => {
+               admin.firestore().collection(col_users).doc(uidFd).collection(col_followers).doc(uid).st({
+                    uid: uidFd.uid,
+                    nick: user.nickName,
+                    image: uidFd.image
+               });
+           });
+
+            /*
+                ACTUALIZAR COMMENTS DEL USUARIO
+            */
+           //Cojo Todos Los Comments del User
+           const userComments = await admin.firestore().collection(col_comments).where('uid', '==', uid).get();
+           await userComments.forEach(doc => {
+               doc.set({
+                    cid: doc.data().id,
+                    pid: doc.data().pid,
+                    uid: doc.data().uid,
+                    text: doc.data().text,
+                    nick: user.nickName,
+                    timestamp: doc.data().timestamp
+               });
+           });
+
+            /*
+                ACTUALIZAR USER
+            */
             await admin.firestore().collection(col_users).doc(user.uid.toString()).set({
                 uid: user.uid,
                 email: user.email,
@@ -1519,8 +1602,31 @@ app.put(themes + ':tid', async(req, res) => {    //Update A Theme
                 name: theme.name
             })
 
-            res.status(200).send({message: "Comment Updated In BD"});
-        } else res.status(400).send({message: "Comment not Exists"});
+            //Reemplazo en Todas las Publicaciones Donde Este
+            const pubsThemes = await admin.firestore().collection(col_pubs).where("themes","array-contains", tid).get();
+            await pubsThemes.forEach((doc) => {
+                var ts = doc.data().themes;
+                ts.filter(t => t.equals(tid));
+                ts.push(theme.name);
+
+                var pub = doc.data();
+                admin.firestore().collection(col_pubs).doc(doc.id).set({
+                    //date: pub.date,
+                    //graffiter: pub.graffiter,
+                    //nLikes: pub.nLikes,
+                    //photoURL: pub.photoURL,
+                    //pid: pub.pid,
+                    //state: pub.state,
+                    themes: ts,
+                    //title: pub.title,
+                    //uid: pub.uid,
+                    //coordinates: pub.coordinates
+                });
+
+            });
+
+            res.status(200).send({message: "Theme Updated In BD"});
+        } else res.status(400).send({message: "Theme not Exists"});
 
     } catch (error) {
         res.status(500).send(error);
@@ -1562,7 +1668,32 @@ app.delete(themes + ':tid', async(req, res) => {    //Delete A Theme
         const exists = (await search.get()).data();
 
         if(exists != null) {    //No Existe la Theme
+
+            //Elimino de Todas las Publicaciones Donde Este
+            const pubsThemes = await admin.firestore().collection(col_pubs).where("themes","array-contains", tid).get();
+            await pubsThemes.forEach((doc) => {
+                var ts = doc.data().themes;
+                ts.filter(t => t.equals(tid));
+
+                var pub = doc.data();
+                admin.firestore().collection(col_pubs).doc(doc.id).set({
+                    //date: pub.date,
+                    //graffiter: pub.graffiter,
+                    //nLikes: pub.nLikes,
+                    //photoURL: pub.photoURL,
+                    //pid: pub.pid,
+                    //state: pub.state,
+                    themes: ts,
+                    //title: pub.title,
+                    //uid: pub.uid,
+                    //coordinates: pub.coordinates
+                });
+
+            });
+
+            //Elimino la Theme
             await admin.firestore().collection(col_themes).doc(tid).delete();
+
             res.status(200).send({message: "Theme Deleted From BD"});
         } else res.status(400).send({message: "Theme not Exists"});
 
