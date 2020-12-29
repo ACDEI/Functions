@@ -16,6 +16,16 @@ app.use(cors({origin:true}));
 const db =  admin.firestore();
 const geoFirestore = new GeoFirestore(db);  //Create a GeoFirestore reference
 
+//Flickr Dependences 
+var Busboy = require('busboy');
+var Flickr = require('flickr-sdk');
+var token_secret = "";
+var oauthToken = "";
+var oauthVerifier="";
+var token = "";
+var tokenSecret = "";
+const Readable = require('readable-stream');
+
 // JSON Files
 var jsonMonuments = null;
 var jsonAirQuality = null;
@@ -2093,6 +2103,194 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas
 
     res.status(200).send(list);
 });
+
+
+///////////////////////////////
+// FUNCIONES FLICKR          //
+///////////////////////////////
+
+//Conectar para obtener url authorize 
+
+app.get("/flickr/conectar", async (req, res) => {
+    try{
+
+   
+        //obtener token de acceso flickr
+        process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
+        process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
+        process.env.FLICKR_API_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
+        var token = "";
+    
+
+        var oauth = new Flickr.OAuth(
+          process.env.FLICKR_CONSUMER_KEY,
+          process.env.FLICKR_CONSUMER_SECRET
+        );
+
+        
+
+        //obtener los token 
+        let self = this;
+        await oauth.request('https://localhost:4200/loadPhoto').then(async function (res) {
+            console.log('yay!', res);
+            console.log(res.body.oauth_token);
+            console.log(res.body.oauth_token_secret);
+            self.token = res.body.oauth_token;
+            self.token_secret = res.body.oauth_token_secret; 
+        }).catch(function (err) {
+        console.error('bonk', err);
+        });
+
+
+        process.env.FLICKR_OAUTH_TOKEN = this.token; 
+        process.env.FLICKR_OAUTH_TOKEN_SECRET = this.token_secret; 
+
+
+
+        //crear plugin 
+        
+        var flickr = Flickr.OAuth.createPlugin(
+            process.env.FLICKR_CONSUMER_KEY,
+            process.env.FLICKR_CONSUMER_SECRET,
+            process.env.FLICKR_OAUTH_TOKEN,
+            process.env.FLICKR_OAUTH_TOKEN_SECRET
+        );
+
+     
+       
+         //autorizacion
+          var url = oauth.authorizeUrl(this.token);
+          url = url + "&perms=write&perms=delete";
+          console.log(url);
+          res.status(200).send({"url":url}); 
+        
+
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
+
+///Subir foto 
+
+
+app.post("/flickr/upload" ,async (req, res) => {
+    try{
+
+        const objArray = []
+        const bb = new Busboy({ headers: req.headers });
+        let fileData = {}
+        let formData = {}
+        const f = [];
+        
+        await new Promise((resolve, reject) => {
+          bb.on('file', function (fieldname, file, filename, encoding, mimetype) {
+            console.log('File [%s]: filename=%j; encoding=%j; mimetype=%j', fieldname, filename, encoding, mimetype);
+            fileData.file = filename
+            fileData.fileName = filename
+            fileData.encoding = encoding
+            fileData.mimetype = mimetype
+            fileData.data = {} 
+
+            file
+            .on('data', data => {
+              fileData.data[fieldname] = data.length;
+              f.push(data);
+            })
+
+            file.on("end", () => {
+                const fileStream = createReadableStream(f);
+                req.body[fieldname] = fileStream;
+                console.log(fieldname);
+            });
+
+          }).on('field', (fieldname, val) => {
+            try {
+              formData[fieldname] = JSON.parse(val)
+            } catch (err) {
+              formData[fieldname] = val
+            }
+          })
+          .on("finish", resolve)
+          .on('error', err => { throw err })
+          bb.end(req.body)
+        })
+
+
+        
+
+    this.oauthToken = formData.oauth_token;
+    this.oauthVerifier = formData.oauth_verifier; 
+
+
+    process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
+    process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
+
+
+    var oauth = new Flickr.OAuth(
+        process.env.FLICKR_CONSUMER_KEY,
+        process.env.FLICKR_CONSUMER_SECRET
+      );
+    
+
+    
+    let self = this; 
+    await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
+        console.log('oauth token:', res.body.oauth_token);
+        console.log('oauth token secret:', res.body.oauth_token_secret);
+        self.token = res.body.oauth_token;
+        self.tokenSecret = res.body.oauth_token_secret;
+      }).catch(function (err) {
+       console.log('bonk', err);
+    });
+
+    process.env.FLICKR_OAUTH_TOKEN = this.token ;
+    process.env.FLICKR_OAUTH_TOKEN_SECRET = this.tokenSecret ;
+
+
+    var flickr = Flickr.OAuth.createPlugin(
+        process.env.FLICKR_CONSUMER_KEY,
+        process.env.FLICKR_CONSUMER_SECRET,
+        process.env.FLICKR_OAUTH_TOKEN,
+        process.env.FLICKR_OAUTH_TOKEN_SECRET
+    );
+
+
+    var upload = new Flickr.Upload(flickr, req.body.file , {
+        title: formData.title,
+        description: formData.description
+    });
+      
+   
+      upload.then(function (resultado) {
+        console.log('yay!', resultado.body);
+        res.status(200).send(resultado.body);
+      }).catch(function (err) {
+        console.error('bonk', err);
+        res.status(500).send(err);
+      });
+      
+
+
+    }catch(error){
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
+const createReadableStream = (buffer) => {
+    const readableInstanceStream = new Readable({
+        read() {
+            for (const bytes of buffer) {
+                this.push(bytes);
+            }
+            this.push(null);
+        },
+    });
+    return readableInstanceStream.read();
+};
 
 /////////////
 // EXPORTS //
