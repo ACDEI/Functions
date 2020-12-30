@@ -2115,13 +2115,13 @@ app.get("/flickr/conectar", async (req, res) => {
     try{
 
    
-        //obtener token de acceso flickr
+        //configurar caves de api flickr
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
         process.env.FLICKR_API_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         var token = "";
     
-
+        //plugin para obtener request token
         var oauth = new Flickr.OAuth(
           process.env.FLICKR_CONSUMER_KEY,
           process.env.FLICKR_CONSUMER_SECRET
@@ -2129,9 +2129,9 @@ app.get("/flickr/conectar", async (req, res) => {
 
         
 
-        //obtener los token 
+        //obtener los token y configurar redirección
         let self = this;
-        await oauth.request('https://localhost:4200/loadPhoto').then(async function (res) {
+        await oauth.request('https://localhost:4200/home').then(async function (res) {
             console.log('yay!', res);
             console.log(res.body.oauth_token);
             console.log(res.body.oauth_token_secret);
@@ -2146,19 +2146,7 @@ app.get("/flickr/conectar", async (req, res) => {
         process.env.FLICKR_OAUTH_TOKEN_SECRET = this.token_secret; 
 
 
-
-        //crear plugin 
-        
-        var flickr = Flickr.OAuth.createPlugin(
-            process.env.FLICKR_CONSUMER_KEY,
-            process.env.FLICKR_CONSUMER_SECRET,
-            process.env.FLICKR_OAUTH_TOKEN,
-            process.env.FLICKR_OAUTH_TOKEN_SECRET
-        );
-
-     
-       
-         //autorizacion
+         //url autorizacion si el usuario cancela le devuelve a la página inicio de flickr
           var url = oauth.authorizeUrl(this.token);
           url = url + "&perms=write&perms=delete";
           console.log(url);
