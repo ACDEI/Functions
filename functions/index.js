@@ -30,6 +30,7 @@ var oauthToken = "";
 var oauthVerifier="";
 var token = "";
 var tokenSecret = "";
+var idFoto = ""
 const Readable = require('readable-stream');
 
 // Variables de Colecciones Principales
@@ -2267,7 +2268,7 @@ app.post("/flickr/upload" ,async (req, res) => {
         var upload = new Flickr.Upload(flickr, req.body.file , {
             title: formData.title
         });
-    
+     
         upload.then(function (resultado) {
             console.log('yay!', resultado.body);
             res.status(200).send(resultado.body);
@@ -2275,6 +2276,7 @@ app.post("/flickr/upload" ,async (req, res) => {
             console.error('bonk', err);
             res.status(500).send(err);
         });
+
 
     } catch(error) {
         console.log(error);
