@@ -1903,11 +1903,36 @@ app.get("/openData/airQuality/size", async(req,res) => {    //Cantidad de Datos 
 
 });
 
+async function autenticationFirebase(req,res){
+
+    const idToken = req.get("Authorization").split('Bearer ')[1];
+         console.log("Autorization------------------------> " + idToken);
+
+    await admin.auth().verifyIdToken(idToken).then((decodedToken) => {
+        const uid = decodedToken.uid;
+        // ...
+        console.log("----------------Usuario autorizado para acceder a las functions-----------------------");
+        console.log(uid);
+    })
+    .catch((error) => {
+        // Handle error
+        console.log("usuario no autorizado a acceder a las functions");
+        res.status(500).send(error);
+    });
+}
+
+
 app.get("/openData/airQuality/", async(req,res) => {    //Todos los Datos 
     //console.log("Fetching data...");
-    try {
-      await refreshAirQuality();
-      res.status(200).send(jsonAirQuality);
+    try {    
+        //const idToken = req.headers.authorization.split('Bearer ')[1]
+         //const idToken = req.get("Authorization").split('Bearer ')[1];
+         //console.log("Autorization------------------------> " + idToken);
+         //idToken comes from the client app
+         await autenticationFirebase(req,res);
+    
+        await refreshAirQuality();
+        res.status(200).send(jsonAirQuality);
     } catch(error) {
         console.log(error);
         res.status(500).send(error);
@@ -2113,8 +2138,8 @@ app.get("/flickr/conectar", async (req, res) => {
             console.log("usuario no autorizado a acceder a las functions");
             res.status(500).send(error);
         });
-        */
-
+        
+*/
 
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
