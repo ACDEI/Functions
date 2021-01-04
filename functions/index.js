@@ -2098,8 +2098,24 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas
 //CONECTAR PARA OBTENER URL AUTHORIZE
 app.get("/flickr/conectar", async (req, res) => {
     try{
+       
+        //let idToken = req.get("Authorization");
+        //console.log("Autorization------------------------> " + idToken);
+        // idToken comes from the client app
+        /*
+        admin.auth().verifyIdToken(idToken).then((decodedToken) => {
+            const uid = decodedToken.uid;
+            // ...
+            console.log("----------------Usuario autorizado para acceder a las functions-----------------------");
+        })
+        .catch((error) => {
+            // Handle error
+            console.log("usuario no autorizado a acceder a las functions");
+            res.status(500).send(error);
+        });
+        */
 
-   
+
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
@@ -2131,7 +2147,8 @@ app.get("/flickr/conectar", async (req, res) => {
 
         //url autorizacion si el usuario cancela le devuelve a la página inicio de flickr
         var url = oauth.authorizeUrl(this.token);
-        url = url + "&perms=write&perms=delete";
+        url = url + "&perms=write";
+        //url = url + "&perms=write&perms=delete";
         console.log(url);
         res.status(200).send({"url":url}); 
 
