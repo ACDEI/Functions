@@ -2269,9 +2269,11 @@ app.post("/flickr/upload" ,async (req, res) => {
             title: formData.title
         });
      
-        upload.then(function (resultado) {
-            console.log('yay!', resultado.body);
-            res.status(200).send(resultado.body);
+        upload.then(async function(resultado) {
+            console.log('yay!', resultado.body.photoid._content);
+            let resul = await getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=9cab71d9d05b7c91e06ae4da65b6ba8d&photo_id="+ resultado.body.photoid._content + "&format=json&nojsoncallback=?");
+            res.status(200).send(resul);
+
         }).catch(function (err) {
             console.error('bonk', err);
             res.status(500).send(err);
