@@ -1930,7 +1930,7 @@ app.get("/openData/airQuality/", async(req,res) => {    //Todos los Datos
          //const idToken = req.get("Authorization").split('Bearer ')[1];
          //console.log("Autorization------------------------> " + idToken);
          //idToken comes from the client app
-         await autenticationFirebase(req,res);
+        await autenticationFirebase(req,res);
     
         await refreshAirQuality();
         res.status(200).send(jsonAirQuality);
@@ -2124,23 +2124,8 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas
 //CONECTAR PARA OBTENER URL AUTHORIZE
 app.get("/flickr/conectar", async (req, res) => {
     try{
-       
-        //let idToken = req.get("Authorization");
-        //console.log("Autorization------------------------> " + idToken);
-        // idToken comes from the client app
-        /*
-        admin.auth().verifyIdToken(idToken).then((decodedToken) => {
-            const uid = decodedToken.uid;
-            // ...
-            console.log("----------------Usuario autorizado para acceder a las functions-----------------------");
-        })
-        .catch((error) => {
-            // Handle error
-            console.log("usuario no autorizado a acceder a las functions");
-            res.status(500).send(error);
-        });
-        
-*/
+
+        await autenticationFirebase(req,res);
 
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
