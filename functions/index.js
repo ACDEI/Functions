@@ -1377,16 +1377,22 @@ app.post(pubs, async (req, res) => {
     
     try{
 
+        console.log('nose')
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        //await authenticationFirebase(req, res);
 
         var result = await admin.firestore().collection(col_users).doc(req.body.uid);
         var existsU = (await result.get()).data(); 
 
-        if(existsU == null && req.body.lat != null && req.body.lng != null){
+        if(existsU != null && req.body.lat != null && req.body.lng != null){
 
             const lat =  Number(req.body.lat); 
             const lng = Number(req.body.lng);
+
+            var ts = [];
+            req.body.themes.forEach(t => {
+                ts.push(t.name);
+            })
 
             await geoFirestore.collection(col_pubs).doc(req.body.pid).set({
                 date: new Date() ,
@@ -1394,7 +1400,7 @@ app.post(pubs, async (req, res) => {
                 photoURL: req.body.photoURL,
                 pid: req.body.pid,
                 state: req.body.state,
-                themes: req.body.themes,
+                themes: ts,
                 title: req.body.title,
                 uid:req.body.uid,
                 coordinates:new admin.firestore.GeoPoint(lat,lng)
@@ -2421,7 +2427,7 @@ app.post("/flickr/upload" ,async (req, res) => {
     try{
 
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        //await authenticationFirebase(req, res);
 
         const objArray = []
         const bb = new Busboy({ headers: req.headers });
@@ -2492,7 +2498,7 @@ app.post("/flickr/upload" ,async (req, res) => {
             title: formData.title
         });
     
-        upload.then(function (resultado) {
+        upload.then(async function (resultado) {
             //console.log('Body_Content: ', resultado.body.photoid._content);
             let result = await getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=9cab71d9d05b7c91e06ae4da65b6ba8d&photo_id="+ resultado.body.photoid._content + "&format=json&nojsoncallback=?");
             res.status(200).send(result);
