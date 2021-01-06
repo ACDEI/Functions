@@ -2406,6 +2406,7 @@ app.get("/flickr/conectar", async (req, res) => {
             //console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body..oauth_token_secret);
             self.token = res.body.oauth_token;
             self.token_secret = res.body.oauth_token_secret; 
+            console.log("-----------------------> 1 " + self.token_secret);
         }).catch(function (err) {
             //console.error('bonk', err);
         });
@@ -2413,7 +2414,7 @@ app.get("/flickr/conectar", async (req, res) => {
 
         process.env.FLICKR_OAUTH_TOKEN = this.token; 
         process.env.FLICKR_OAUTH_TOKEN_SECRET = this.token_secret; 
-
+        console.log("-----------------------------------> 2 " + this.token_secret);
 
         //OAuth Url: Si el usuario cancela le devuelve a Flickr
         var url = oauth.authorizeUrl(this.token);
@@ -2459,7 +2460,6 @@ app.post("/flickr/upload" ,async (req, res) => {
             file.on("end", () => {
                 const fileStream = createReadableStream(f);
                 req.body[fieldname] = fileStream;
-                //console.log(fieldname);
             });
 
             }).on('field', (fieldname, val) => {
