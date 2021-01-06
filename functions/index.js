@@ -30,8 +30,10 @@ var oauthToken = "";
 var oauthVerifier="";
 var token = "";
 var tokenSecret = "";
-var idFoto = ""
+var idFoto = "";
 const Readable = require('readable-stream');
+
+//Twitter API
 
 // Variables de Colecciones Principales
 
@@ -68,7 +70,11 @@ var col_themes = 'themes';        //URL Themes
 //Coleccion Base
 // GET - READ
 app.get(users, async (req, res) => {    //All Users (without sub-collections)
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_users).get();
         const users = [];
@@ -86,7 +92,12 @@ app.get(users, async (req, res) => {    //All Users (without sub-collections)
 });
 
 app.get(users + "count", async(req,res)=> { //Users Number
+   
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         await db.collection(col_users).get().then(snap => {
             res.status(200).send({length: snap.size});
         });
@@ -98,13 +109,15 @@ app.get(users + "count", async(req,res)=> { //Users Number
 });
 
 app.get(users + ":uid", async (req, res) => {    //User By UID (without sub-collections)
+    
     try {
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_users).doc(req.params.uid).get();
-        //const users = [];
         var id = snapshot.id;
         var data = snapshot.data();
-        //users.push({ id, ...data });
         res.status(200).send({ id, ...data });
 
     }catch(error){
@@ -114,7 +127,11 @@ app.get(users + ":uid", async (req, res) => {    //User By UID (without sub-coll
 });
 
 app.get(users + "email/:email", async (req, res) => {    //User By Email (without sub-collections)
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_users).orderBy('email', 'asc').get();
         const users = [];
@@ -137,7 +154,11 @@ app.get(users + "email/:email", async (req, res) => {    //User By Email (withou
 });
 
 app.get(users + "admin/:admin", async (req, res) => {    //All (no) Admin Users (without sub-collections)
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_users).get();
         const users = [];
@@ -162,24 +183,28 @@ app.get(users + "admin/:admin", async (req, res) => {    //All (no) Admin Users 
 });
 
 app.get(users + 'range/:from/:to',async(req,res)=>{  //Users Into a Range
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const from = Number(req.params.from);
         const to = Number(req.params.to);
         var result = to-from; 
 
-    if(result >= 0){
-        result++;
-        const snapshot = await admin.firestore().collection(col_users).offset(from).limit(result).get();
-        const users = [];
-        snapshot.forEach((doc) => {
-            const id = doc.id;
-            const data = doc.data();
-            users.push({ id, ...data });
-        });
-        res.status(200).send(users);
+        if(result >= 0){
+            result++;
+            const snapshot = await admin.firestore().collection(col_users).offset(from).limit(result).get();
+            const users = [];
+            snapshot.forEach((doc) => {
+                const id = doc.id;
+                const data = doc.data();
+                users.push({ id, ...data });
+            });
+            res.status(200).send(users);
 
-    }else res.status(400).send({message : "From higher than to"});
+        } else res.status(400).send({message : "From higher than to"});
 
     }catch(error){
         console.log(error);
@@ -190,6 +215,9 @@ app.get(users + 'range/:from/:to',async(req,res)=>{  //Users Into a Range
 app.get(users + 'name/:name', async(req, res) => {  //Users By Name (Part)
 
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const search = await admin.firestore().collection(col_users).get();
         const result = [];
@@ -213,7 +241,11 @@ app.get(users + 'name/:name', async(req, res) => {  //Users By Name (Part)
 
 //Innecesaria
 app.get(users + "pubs/:email", async (req, res) => {    //User Publications By Email
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_users).where('email', '==', req.params.uid).get();
         const users = [];
@@ -249,122 +281,125 @@ app.put(users + ':uid', async(req, res) => {
 
     try{
 
-        const search = await admin.firestore().collection(col_users).doc(req.params.uid.toString());
+        //Comprobar si usuario Autenticado
+       await authenticationFirebase(req, res);
+
+        const useruid = req.params.uid;
+        const search = await admin.firestore().collection(col_users).doc(useruid);
         const exists = (await search.get()).data();
 
         if(exists != null) {
             const user = req.body;
-            if(req.params.uid.toString() === user.uid.toString()){
 
-                /*
-                    ACTUALIZAR LIKES DEL USUARIO
-                */
+            /*
+                ACTUALIZAR LIKES DEL USUARIO
+            */
 
-                //Cojo Todos Los Likes del User -> Para sus Likes
-                const userLikes = await admin.firestore().collection(col_users).doc(user.uid).collection(col_likes).get();
-                const usrL = [];
-                userLikes.forEach(doc => {
-                    var pid = doc.data();   //Id de Pub que tiene Like
-                    usrL.push(pid);
+            //Actualizo Los Likes Si Son a Fotos Suyas
+            
+            const users = await admin.firestore().collection(col_users).get();
+            var colUsers = [];
+            users.forEach(uid => {
+                colUsers.push(uid.id);
+            });
+
+            //var userQueDaLike = [];
+            for(let uid of colUsers) {
+                var likesPerUser = await admin.firestore().collection(col_users).doc(uid).collection(col_likes);
+                likesPerUser.where('upl_uid', '==', useruid)
+                    .get()
+                    .then( snapshot => {
+                        if(snapshot.size > 0) {
+                            snapshot.forEach(item => {
+                                likesPerUser.doc(item.id).update({
+                                    upl_nick: user.nickName
+                                });
+                            })
+                        }
+                    })
+            }
+
+            //Cojo Todos Los Likes del User -> Para sus Likes
+            const userLikes = await admin.firestore().collection(col_users).doc(useruid).collection(col_likes).get();
+            const usrL = [];
+            userLikes.forEach(doc => {
+                var pid = doc.data();   //Id de Pub que tiene Like
+                usrL.push(pid);
+            });
+
+            //Actualizo Sus Likes en Las Publicaciones
+            for( const pidd of usrL) {
+                await admin.firestore().collection(col_pubs).doc(pidd.pid).collection(col_likes).doc(useruid).update({
+                    nick : user.nickName,
+                    image : user.photoURL
                 });
+            }
 
-                //Actualizo Sus Likes Si Son a Fotos Suyas
-                for( const pidd of usrL ) {
-                    await admin.firestore().collection(col_users).doc(user.uid).collection(col_likes).doc(pidd.pid).set({
-                        pid: pidd.pid,
-                        title: pidd.title,
-                        upl_uid: pidd.upl_uid,
-                        upl_nick: user.nickName,
-                        image: pidd.image
-                    });
-                }
+            /*
+                ACTUALIZAR SEGUIDORES DEL USUARIO
+            */
+            //Cojo Todos Los Followers del User -> User es SEGUIDO por ellos
+            const userFollowers = await admin.firestore().collection(col_users).doc(useruid).collection(col_followers).get();
+            const usrFw = [];
+            userFollowers.forEach(doc => {
+                var uidFw = doc.data();   //Id de Usr que le Sigue
+                usrFw.push(uidFw);
+            });
 
-                //Actualizo Los Likes en Las Publicaciones
-                for( const pidd of usrL) {
-                    await admin.firestore().collection(col_pubs).doc(pidd.pid).collection(col_likes).doc(user.uid).set({
-                        uid : user.uid,
-                        nick : user.nickName,
-                        image : user.photoURL
-                    });
-                }
-
-                /*
-                    ACTUALIZAR SEGUIDORES DEL USUARIO
-                */
-                //Cojo Todos Los Followers del User -> User es SEGUIDO por ellos
-                const userFollowers = await admin.firestore().collection(col_users).doc(user.uid).collection(col_followers).get();
-                const usrFw = [];
-                userFollowers.forEach(doc => {
-                    var uidFw = doc.data();   //Id de Usr que le Sigue
-                    usrFw.push(uidFw);
+            //Actualizo al usuario de sus Seguidos
+            for(const uidFw of usrFw) {
+                await admin.firestore().collection(col_users).doc(uidFw.uid).collection(col_followed).doc(useruid).update({
+                    nick: user.nickName,
+                    image: user.photoURL
                 });
+            }
 
-                //Actualizo al usuario de sus Seguidos
-                for(const uidFw of usrFw) {
-                    await admin.firestore().collection(col_users).doc(uidFw.uid).collection(col_followed).doc(user.uid).set({
-                        uid: uidFw.uid,
-                        nick: user.nickName,
-                        image: uidFw.image
-                    });
-                }
+            /*
+                ACTUALIZAR SEGUIDOS DEL USUARIO
+            */
+            //Cojo Todos Los Followed del User -> User es SEGUIDOR de ellos
+            const userFollowed = await admin.firestore().collection(col_users).doc(useruid).collection(col_followed).get();
+            const usrFd = [];
+            userFollowed.forEach(doc => {
+                var uidFd = doc.data();   //Id de Usr que le Sigue
+                usrFd.push(uidFd);
+            });
 
-                /*
-                    ACTUALIZAR SEGUIDOS DEL USUARIO
-                */
-                //Cojo Todos Los Followed del User -> User es SEGUIDOR de ellos
-                const userFollowed = await admin.firestore().collection(col_users).doc(user.uid).collection(col_followed).get();
-                const usrFd = [];
-                userFollowed.forEach(doc => {
-                    var uidFd = doc.data();   //Id de Usr que le Sigue
-                    usrFd.push(uidFd);
+            //Actualizo al usuario de sus Seguidores
+            for(const uidFd of usrFd) {
+                console.log(uidFd);
+                await admin.firestore().collection(col_users).doc(uidFd.uid).collection(col_followers).doc(useruid).update({
+                    nick: user.nickName,
+                    image: user.photoURL
                 });
+            }
 
-                //Borro al usuario de sus Seguidores
-                for(const uidFd of usrFd) {
-                    await admin.firestore().collection(col_users).doc(uidFd.uid).collection(col_followers).doc(user.uid).set({
-                        uid: uidFd.uid,
-                        nick: user.nickName,
-                        image: uidFd.image
-                    });
-                }
-
-                /*
-                    ACTUALIZAR COMMENTS DEL USUARIO
-                */
-                //Cojo Todos Los Comments del User
-                const userComments = await admin.firestore().collection(col_comments).where('uid', '==', user.uid).get();
-                var usrCm = [];
-                userComments.forEach(doc => {
-                    var cid = doc.data();   //Id de Usr que le Sigue
-                    usrCm.push(cid);
+            /*
+                ACTUALIZAR COMMENTS DEL USUARIO
+            */
+            //Cojo Todos Los Comments del User
+            const userComments = await admin.firestore().collection(col_comments).where('uid', '==', useruid).get();
+            var usrCm = [];
+            userComments.forEach(doc => {
+                var cid = doc.data();   //Id de Usr que le Sigue
+                usrCm.push(cid);
+            });
+            for(const cid of usrCm) {
+                await admin.firestore().collection(col_comments).doc(cid.cid).update({
+                    nick: user.nickName,
+                    image: user.photoURL
                 });
-                for(const cid of usrCm) {
-                    console.log(cid);
-                    await admin.firestore().collection(col_comments).doc(cid.cid).set({
-                        cid: cid.cid,
-                        pid: cid.pid,
-                        uid: cid.uid,
-                        text: cid.text,
-                        nick: user.nickName,
-                        timestamp: cid.timestamp
-                    });
-                }
-                
+            }
 
-                /*
-                    ACTUALIZAR USER
-                */
-                await admin.firestore().collection(col_users).doc(user.uid.toString()).set({
-                    uid: user.uid,
-                    email: user.email,
-                    fullName: user.fullName,
-                    isAdmin: user.isAdmin,
-                    nickName: user.nickName,
-                    photoURL: user.photoURL, 
-                    nVisitados : user.nVisitados
-                })
-                res.status(200).send({message: "User Updated In BD"});
-            } else res.status(400).send({message: "User ID cannot be change"});
+            /*
+                ACTUALIZAR USER
+            */
+            await admin.firestore().collection(col_users).doc(useruid.toString()).update({
+                fullName: user.fullName,
+                nickName: user.nickName,
+                photoURL: user.photoURL
+            })
+            res.status(200).send({message: "User Updated In BD"});
         } else res.status(400).send({message: "User ID not exists in BD"});
 
     } catch (error) {
@@ -378,6 +413,9 @@ app.put(users + ':uid', async(req, res) => {
 app.post(users, async(req, res) => {
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const search = await admin.firestore().collection(col_users).doc(req.body.uid.toString());
         const exists = (await search.get()).data();
@@ -417,6 +455,9 @@ app.delete(users + ":uid", async (req, res) => {
     
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uid = req.params.uid.toString();
 
         //Compruebo que Existe el Usuario
@@ -427,10 +468,31 @@ app.delete(users + ":uid", async (req, res) => {
 
         if(required){
 
-
             /*
                 BORRAR LIKES DEL USUARIO
             */
+
+             //Borro Los Likes Si Son a Fotos Suyas
+             const users = await admin.firestore().collection(col_users).get();
+             var colUsers = [];
+             users.forEach(uid => {
+                 colUsers.push(uid.id);
+             });
+
+             //var userQueDaLike = [];
+             for(let uid of colUsers) {
+                 var likesPerUser = await admin.firestore().collection(col_users).doc(uid).collection(col_likes);
+                 likesPerUser.where('upl_uid', '==', useruid)
+                     .get()
+                     .then( snapshot => {
+                         if(snapshot.size > 0) {
+                             snapshot.forEach(item => {
+                                 likesPerUser.doc(item.id).delete();
+                             })
+                         }
+                     })
+             }
+
             //Cojo Todos Los Likes del User -> Para sus Likes
             const userLikes = await admin.firestore().collection(col_users).doc(uid).collection(col_likes).get();
             const usrL = [];
@@ -489,16 +551,29 @@ app.delete(users + ":uid", async (req, res) => {
                 BORRAR COMMENTS DEL USUARIO
             */
             //Cojo Todos Los Comments del User
-            const userComments = await admin.firestore().collection(col_comments).where('uid', '==', uid).get();
-            const cpA = [];
-            userComments.forEach(doc => {
-                var cid = doc.data().cid;   //Id de Usr que le Sigue
-                cpA.push(cid);
-            });
+            const userComments = await admin.firestore().collection(col_comments);
+                userComments.where('uid', '==', uid).get()
+                .then( snapshot => {
+                if(snapshot.size > 0) {
+                    snapshot.forEach(item => {
+                        userComments.doc(item.id).delete();
+                    })
+                }
+            })
 
-           for(const cid of cpA) {
-               await admin.firestore().collection(col_comments).doc(cid).delete();
-           }
+            /*
+                BORRAR VISITADOS DEL USUARIO
+            */
+            //Cojo Todos Los Comments del User
+            const userVisitados = await admin.firestore().collection(col_users).doc(uid).collection('visitados');
+                userVisitados.get()
+                .then( snapshot => {
+                if(snapshot.size > 0) {
+                    snapshot.forEach(item => {
+                        userVisitados.doc(item.id).delete();
+                    })
+                }
+            })
 
             /*
                 BORRAR PUBLICACIONES DEL USUARIO
@@ -550,7 +625,12 @@ var col_likes = 'likes';
 
 // GET - READ
 app.get(followers + ':uid', async(req,res) => {   //User's Followers By UID
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_users).doc(req.params.uid).collection(col_followers).get();
         const followers = [];
         snapshot.forEach((doc) => {
@@ -566,7 +646,11 @@ app.get(followers + ':uid', async(req,res) => {   //User's Followers By UID
 });
 
 app.get(followers + "count/:uid", async(req,res)=> { //Followers Number
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uid = req.params.uid.toString();
         await db.collection(col_users).doc(uid).collection(col_followers).get().then(snap => {
@@ -584,6 +668,9 @@ app.put(followers + ':uid&:uidF', async(req, res) => {    //Update a Follower fr
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // UID del Usuario
         const uidF = req.params.uidF.toString();    // UID del Seguidor
         const search = await admin.firestore().collection(col_users).doc(uidP).collection(col_followers).doc(uidF);
@@ -592,8 +679,7 @@ app.put(followers + ':uid&:uidF', async(req, res) => {    //Update a Follower fr
         if(exists != null) {    //No Existe el Seguidor o el Usuario
             const user = req.body;  //Datos del Seguidor Actualizados
             if(uidF === user.uid.toString()){    //UID Follower no Cambia
-                await admin.firestore().collection(col_users).doc(uidP).collection(col_followers).doc(uidF).set({
-                    uid: user.uid,
+                await admin.firestore().collection(col_users).doc(uidP).collection(col_followers).doc(uidF).update({
                     nick: user.nick,
                     image: user.image
                 })
@@ -615,6 +701,9 @@ app.put(followers + ':uid&:uidF', async(req, res) => {    //Update a Follower fr
 app.post(followers + ':uid', async(req, res) => {    //Add a Follower to User By UID
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uidP = req.params.uid.toString();     // UID del Usuario
         const uidF = req.body.uid.toString();
@@ -657,6 +746,9 @@ app.delete(followers + ":uid&:uidF", async (req, res) => {
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // A
         const uidF = req.params.uidF.toString();    // B
 
@@ -686,7 +778,12 @@ app.delete(followers + ":uid&:uidF", async (req, res) => {
 
 // GET - READ
 app.get(followed + ':uid', async(req,res) => {      //User's Followed By UID
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_users).doc(req.params.uid).collection(col_followed).get();
         const followed = [];
         snapshot.forEach((doc) => {
@@ -702,7 +799,11 @@ app.get(followed + ':uid', async(req,res) => {      //User's Followed By UID
 });
 
 app.get(followed + "count/:uid", async(req,res)=> { //Followed Number
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uid = req.params.uid.toString();
         await db.collection(col_users).doc(uid).collection(col_followed).get().then(snap => {
@@ -720,6 +821,9 @@ app.put(followed + ':uid&:uidF', async(req, res) => {    //Update a Followed fro
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // UID del Usuario
         const uidF = req.params.uidF.toString();    // UID del Seguido
         const search = await admin.firestore().collection(col_users).doc(uidP).collection(col_followed).doc(uidF);
@@ -728,8 +832,7 @@ app.put(followed + ':uid&:uidF', async(req, res) => {    //Update a Followed fro
         if(exists != null) {    //No Existe el Seguido o el Usuario
             const user = req.body;  //Datos del Seguido Actualizados
             if(uidF === user.uid.toString()){    //UID Follower no Cambia
-                await admin.firestore().collection(col_users).doc(uidP).collection(col_followed).doc(uidF).set({
-                    uid: user.uid,
+                await admin.firestore().collection(col_users).doc(uidP).collection(col_followed).doc(uidF).update({
                     nick: user.nick,
                     image: user.image
                 })
@@ -751,6 +854,9 @@ app.put(followed + ':uid&:uidF', async(req, res) => {    //Update a Followed fro
 app.post(followed + ':uid', async(req, res) => {    //Add a Follower to User By UID
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uidP = req.params.uid.toString();     // UID del Usuario
         const uidF = req.body.uid.toString();
@@ -793,6 +899,9 @@ app.delete(followed + ":uid&:uidF", async (req, res) => {
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // A
         const uidF = req.params.uidF.toString();    // B
 
@@ -822,7 +931,12 @@ app.delete(followed + ":uid&:uidF", async (req, res) => {
 
 // GET - READ
 app.get(users + 'likes/:uid', async(req,res) => {      //User's Likes By UID
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_users).doc(req.params.uid).collection(col_likes).get();
         const likes = [];
         snapshot.forEach((doc) => {
@@ -838,7 +952,11 @@ app.get(users + 'likes/:uid', async(req,res) => {      //User's Likes By UID
 });
 
 app.get(users + 'likescount/:uid', async(req,res)=> { //Likes User Number
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uid = req.params.uid.toString();
         await db.collection(col_users).doc(uid).collection(col_likes).get().then(snap => {
@@ -856,6 +974,9 @@ app.put(users + 'likes/:uid&:pid', async(req, res) => {    //Update a Liked Phot
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // UID del Usuario
         const pid = req.params.pid.toString();      // PID de Publicacion Likeada
         const search = await admin.firestore().collection(col_users).doc(uidP).collection(col_likes).doc(pid);
@@ -865,12 +986,9 @@ app.put(users + 'likes/:uid&:pid', async(req, res) => {    //Update a Liked Phot
 
             const liked = req.body;  //Datos de la Publicacion Actualzada
             if(pid === liked.pid.toString()){    //PID no cambia
-                await admin.firestore().collection(col_users).doc(uidP).collection(col_likes).doc(pid).set({
-                    pid: liked.pid,
+                await admin.firestore().collection(col_users).doc(uidP).collection(col_likes).doc(pid).update({
                     title: liked.title,
-                    upl_uid: liked.upl_uid,
-                    upl_nick: liked.upl_nick,
-                    image: liked.image
+                    upl_nick: liked.upl_nick
                 })
                 res.status(200).send({message: "Liked Updated In BD"});
             } else res.status(400).send({message: "Liked ID cannot be change"});
@@ -890,6 +1008,9 @@ app.put(users + 'likes/:uid&:pid', async(req, res) => {    //Update a Liked Phot
 app.post(users + 'likes/:uid', async(req, res) => {    //Add a Liked Photo to User By UID
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uidP = req.params.uid.toString();     // UID del Usuario
         const pid = req.body.pid.toString();       //PID de la imagen
@@ -934,6 +1055,9 @@ app.delete(users + 'likes/:uid&:pid', async (req, res) => {
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // A
         const pid = req.params.pid.toString();    // B
 
@@ -975,7 +1099,11 @@ app.delete(users + 'likes/:uid&:pid', async (req, res) => {
 
 // GET - READ
 app.get(pubs, async (req, res) => {    //All Publications Order By Date (without sub-collections)
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_pubs).orderBy('date', 'desc').get();
         const publications = [];
@@ -993,7 +1121,11 @@ app.get(pubs, async (req, res) => {    //All Publications Order By Date (without
 });
 
 app.get(pubs + "count", async (req, res) => {
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         await db.collection(col_pubs).get().then(snap => {
             res.status(200).send({length: snap.size});
@@ -1006,7 +1138,11 @@ app.get(pubs + "count", async (req, res) => {
 });
 
 app.get(pubs + ":pid", async (req, res) => {    //Pubs By PID (without sub-collections)
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_pubs).doc(req.params.pid).get();
         //const publications = [];
@@ -1024,6 +1160,9 @@ app.get(pubs + ":pid", async (req, res) => {    //Pubs By PID (without sub-colle
 app.get(pubs + 'title/:title', async(req, res) => {  //Pubs By Title (Part)
 
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const search = await admin.firestore().collection(col_pubs).get();
         const result = [];
@@ -1046,7 +1185,11 @@ app.get(pubs + 'title/:title', async(req, res) => {  //Pubs By Title (Part)
 });
 
 app.get(pubs + 'range/:from/:to',async(req,res)=>{
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const from = Number(req.params.from);
         const to = Number(req.params.to);
@@ -1075,6 +1218,9 @@ app.get(pubs + 'user/:uid', async(req, res) => {  //Pubs By User UID
 
     try {
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uid = req.params.uid.toString();
         const search = await admin.firestore().collection(col_pubs).where('uid', '==', uid).get();
         const result = [];
@@ -1095,6 +1241,9 @@ app.get(pubs + 'user/:uid', async(req, res) => {  //Pubs By User UID
 app.get(pubs + 'graffiter/:graffiter', async(req, res) => {  //Pubs By Graffiter (Part)
 
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const search = await admin.firestore().collection(col_pubs).get();
         const result = [];
@@ -1117,7 +1266,11 @@ app.get(pubs + 'graffiter/:graffiter', async(req, res) => {  //Pubs By Graffiter
 });
 
 app.get(pubs + 'themes/:id',async(req,res) => {   //Get Pubs From Theme (Only one)
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_pubs).where("themes","array-contains",req.params.id);
         const publications = [];
@@ -1149,6 +1302,9 @@ app.put(pubs + ":pid", async (req, res) => {
     
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const pid = req.params.pid.toString();
         const publication = geoFirestore.collection(col_pubs).doc(pid);
 
@@ -1162,7 +1318,7 @@ app.put(pubs + ":pid", async (req, res) => {
              delete req.body.lat
              delete req.body.lng
         }
-        await publication.update(req.body); 
+        await publication.update(req.body);
 
         var requireUpdate = false;  //Solo si el titulo es diferente
         if(titlePrev !== titleNew) requireUpdate = true;
@@ -1181,14 +1337,31 @@ app.put(pubs + ":pid", async (req, res) => {
             for(const uid of users){
                 const origData = await admin.firestore().collection(col_users).doc(uid).collection(col_likes).doc(pid);
                 var dataLike = (await origData.get()).data();
-                origData.set({
-                    pid: dataLike.pid,
+                origData.update({
                     title: req.body.title,
-                    upl_uid: dataLike.upl_uid,
                     upl_nick: dataLike.upl_nick,
-                    image: dataLike.image
                 });
             }
+
+            /*
+                ACTUALIZAR VISITADOS DEL USUARIO
+            */
+            const userVisitados = await admin.firestore().collection(col_users);
+                userVisitados.get()
+                .then( snapshot => {
+                if(snapshot.size > 0) {
+                    snapshot.forEach(item => {
+                        const pubVisited = userVisitados.doc(item.id).collection('visitados');
+                        pubVisited.where('pid', '==', pid).get().then( pubSnap => {
+                            if(pubSnap.size > 0) {
+                                pubSnap.forEach(p => {
+                                    pubVisited.doc(p.id).update({ title : req.body.title });
+                                })
+                            }
+                        })
+                    })
+                }
+            })
         }
 
         res.status(200).send({message : "Publication Updated"});
@@ -1201,7 +1374,11 @@ app.put(pubs + ":pid", async (req, res) => {
 
 // POST - WRITE
 app.post(pubs, async (req, res) => {
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         var result = await admin.firestore().collection(col_users).doc(req.body.uid);
         var existsU = (await result.get()).data(); 
@@ -1240,6 +1417,9 @@ app.post(pubs, async (req, res) => {
 app.delete(pubs + ":pid", async (req, res) => {
     
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const pid = req.params.pid.toString();
         const pubData = (await admin.firestore().collection(col_pubs).doc(pid).get()).data();
@@ -1300,7 +1480,12 @@ app.delete(pubs + ":pid", async (req, res) => {
 
 // GET - READ
 app.get(pubs + 'likes/:pid', async(req,res) => {      //Pub's Likes By PID
+    
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_pubs).doc(req.params.pid).collection(col_likes).get();
         const likes = [];
         snapshot.forEach((doc) => {
@@ -1316,7 +1501,11 @@ app.get(pubs + 'likes/:pid', async(req,res) => {      //Pub's Likes By PID
 });
 
 app.get(pubs + "likescount/:pid", async(req,res)=> { //Likes Pub Number
+    
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const pid = req.params.pid.toString();
         await db.collection(col_pubs).doc(pid).collection(col_likes).get().then(snap => {
@@ -1334,6 +1523,9 @@ app.put(pubs + 'likes/:uid&:pid', async(req, res) => {    //Update a User that L
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // UID del Usuario
         const pid = req.params.pid.toString();      // PID de Publicacion
         const search = await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uidP);
@@ -1342,8 +1534,7 @@ app.put(pubs + 'likes/:uid&:pid', async(req, res) => {    //Update a User that L
         if(exists != null) {    //No Existe el Usuario o la Publicacion
             const liked = req.body;  //Datos del Usuario Actualizado
             if(uidP === liked.uid.toString()){    //UID no cambia
-                await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uidP).set({
-                    uid: liked.uid,
+                await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uidP).update({
                     nick: liked.nick,
                     image: liked.image
                 })
@@ -1365,6 +1556,9 @@ app.put(pubs + 'likes/:uid&:pid', async(req, res) => {    //Update a User that L
 app.post(pubs + 'likes/:pid', async(req, res) => {    //Add a User to Pub By PID
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const uidP = req.body.uid.toString();     // UID del Usuario
         const pid = req.params.pid.toString();       //PID de la imagen
@@ -1410,6 +1604,9 @@ app.delete(pubs + "likes/:uid&:pid", async (req, res) => {
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const uidP = req.params.uid.toString();     // A
         const pid = req.params.pid.toString();    // B
 
@@ -1448,6 +1645,9 @@ app.get(comments, async (req, res) => {    //Comments
     
     try {
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_comments).orderBy('timestamp', 'desc').get();
         const comment = [];
         snapshot.forEach((doc) => {
@@ -1466,6 +1666,9 @@ app.get(comments, async (req, res) => {    //Comments
 app.get(comments + ":cid", async (req, res) => {    //Comments Per User
     
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_comments).orderBy('timestamp', 'desc').get();
         const comment = [];
@@ -1488,6 +1691,9 @@ app.get(comments + "user/:uid", async (req, res) => {    //Comments Per User
     
     try {
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_comments).where('uid', '==', req.params.uid).orderBy('timestamp', 'desc').get();
         const comment = [];
         snapshot.forEach((doc) => {
@@ -1506,6 +1712,9 @@ app.get(comments + "user/:uid", async (req, res) => {    //Comments Per User
 app.get(comments + "publication/:pid", async (req, res) => {    //Comments Per Publication
     
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_comments)
                     .where('pid', '==', req.params.pid).orderBy('timestamp', 'desc').get();
@@ -1528,19 +1737,17 @@ app.put(comments + ':cid', async(req, res) => {    //Update A Comment
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const cid = req.params.cid.toString();     // CID del Comment
         const search = await admin.firestore().collection(col_comments).doc(cid);
         const exists = (await search.get()).data();
 
         if(exists != null) {    //No Existe el comment
             const comment = req.body;  //Datos del comment Actualzada
-            await admin.firestore().collection(col_comments).doc(cid).set({
-                cid: exists.cid,
-                pid: exists.pid,
-                uid: exists.uid,
-                text: comment.text,
-                nick: comment.nick,
-                timestamp: exists.timestamp
+            await admin.firestore().collection(col_comments).doc(cid).update({
+                nick: comment.nick
             })
             res.status(200).send({message: "Comment Updated In BD"});
         } else res.status(400).send({message: "Comment not Exists"});
@@ -1557,6 +1764,9 @@ app.post(comments, async(req, res) => {    //Post A Comment
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const cid = req.body.cid.toString();     // CID del Comment
         const search = await admin.firestore().collection(col_comments).doc(cid);
         const exists = (await search.get()).data();
@@ -1569,6 +1779,7 @@ app.post(comments, async(req, res) => {    //Post A Comment
                 uid: comment.uid,
                 text: comment.text,
                 nick: comment.nick,
+                image: comment.image,
                 timestamp: new Date()
             })
             res.status(200).send({message: "Comment Posted In BD"});
@@ -1585,6 +1796,9 @@ app.post(comments, async(req, res) => {    //Post A Comment
 app.delete(comments + ':cid', async(req, res) => {    //Delete A Comment
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const cid = req.params.cid.toString();     // CID del Comment
         const search = await admin.firestore().collection(col_comments).doc(cid);
@@ -1616,6 +1830,9 @@ app.get(themes, async (req, res) => {    //Themes
     
     try {
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const snapshot = await admin.firestore().collection(col_themes).get();
         const theme = [];
         snapshot.forEach((doc) => {
@@ -1634,6 +1851,9 @@ app.get(themes, async (req, res) => {    //Themes
 app.get(themes + ":tid", async (req, res) => {    //Themes Per TID-Name
     
     try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const snapshot = await admin.firestore().collection(col_themes).get();
         const theme = [];
@@ -1656,6 +1876,9 @@ app.get(themes + ":tid", async (req, res) => {    //Themes Per TID-Name
 app.put(themes + ':tid', async(req, res) => {    //Update A Theme
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const tid = req.params.tid.toString();     // CID del theme
         const search = await admin.firestore().collection(col_themes).doc(tid);
@@ -1708,6 +1931,9 @@ app.post(themes, async(req, res) => {    //Post A Theme
 
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const tid = req.body.name.toString();     // CID del Comment
         const search = await admin.firestore().collection(col_themes).doc(tid);
         const exists = (await search.get()).data();
@@ -1730,6 +1956,9 @@ app.post(themes, async(req, res) => {    //Post A Theme
 app.delete(themes + ':tid', async(req, res) => {    //Delete A Theme
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         const tid = req.params.tid.toString();     // TID de Theme
         const search = await admin.firestore().collection(col_themes).doc(tid);
@@ -1779,10 +2008,12 @@ app.delete(themes + ':tid', async(req, res) => {    //Delete A Theme
 var monumentosURL = "https://datosabiertos.malaga.eu/recursos/urbanismoEInfraestructura/equipamientos/da_cultura_ocio_monumentos-4326.geojson";
 
 app.get("/openData/landmarks", async(req,res) => {  //Todos los Monumentos
-      
-    //console.log("Fetching data...");
 
     try {  
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         await refreshMonuments();
         res.status(200).send(jsonMonuments);
     } catch(error) {
@@ -1793,10 +2024,12 @@ app.get("/openData/landmarks", async(req,res) => {  //Todos los Monumentos
 });
 
 app.get("/openData/landmarks/size", async(req,res) => {     //Cantidad de Datos - Count
-      
-    //console.log("Fetching data...");
 
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         await refreshMonuments();
         res.status(200).send({size : jsonMonuments.length});
     } catch(error) {
@@ -1807,25 +2040,26 @@ app.get("/openData/landmarks/size", async(req,res) => {     //Cantidad de Datos 
 });
 
 app.get("/openData/landmarks/dataName/:nombre", async(req,res) => {     //Datos de Monumento por Nombre      
-    
-    //console.log("Fetching data...");
 
     try{
 
-      await refreshMonuments();
-      var cont = 0; 
-      var encontrado = false; 
-      var item = null; 
-      while(!encontrado && cont < jsonMonuments.length){
-        item = jsonMonuments[cont];
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
-        if(item.name == req.params.nombre) encontrado = true;
+        await refreshMonuments();
+        var cont = 0; 
+        var encontrado = false; 
+        var item = null; 
+        while(!encontrado && cont < jsonMonuments.length){
+            item = jsonMonuments[cont];
 
-        cont++;
-      }
+            if(item.name == req.params.nombre) encontrado = true;
 
-      if(encontrado) res.status(200).send(item);
-      else res.status(400).send(JSON.stringify({message : "LANDMARK NOT FOUND"}));
+            cont++;
+        }
+
+        if(encontrado) res.status(200).send(item);
+        else res.status(400).send(JSON.stringify({message : "LANDMARK NOT FOUND"}));
 
     } catch(error) {
         console.log(error);
@@ -1836,22 +2070,24 @@ app.get("/openData/landmarks/dataName/:nombre", async(req,res) => {     //Datos 
 
 app.get("/openData/landmarks/data/:id", async(req,res) => {     //Datos de Monumento por ID
       
-    //console.log("Fetching data...");
-
     try{
-      await refreshMonuments();
-      var cont = 0; 
-      var encontrado = false; 
-      var item = null; 
-      while(!encontrado && cont < jsonMonuments.length) {
-        item = jsonMonuments[cont];
-        if(item.id == req.params.id) encontrado = true;  
-        cont++;
-      }
 
-      if(encontrado) res.status(200).send(item);
-      else res.status(400).send(JSON.stringify({message : "LANDMARK NOT FOUND"}));
-            
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
+        await refreshMonuments();
+        var cont = 0; 
+        var encontrado = false; 
+        var item = null; 
+        while(!encontrado && cont < jsonMonuments.length) {
+            item = jsonMonuments[cont];
+            if(item.id == req.params.id) encontrado = true;  
+            cont++;
+        }
+
+        if(encontrado) res.status(200).send(item);
+        else res.status(400).send(JSON.stringify({message : "LANDMARK NOT FOUND"}));
+                
     } catch(error) {
         console.log(error);
         res.status(500).send(error);
@@ -1861,9 +2097,10 @@ app.get("/openData/landmarks/data/:id", async(req,res) => {     //Datos de Monum
 
 app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res) => {     //Monumentos cerca de cada Coordenada
       
-    //console.log("Fetching data...");
-
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         await refreshMonuments();
         const lat = Number(req.params.lat);
@@ -1873,8 +2110,11 @@ app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res) => {     //Mo
 
         jsonMonuments.forEach(item => {
             const coords = item.coordinates;
-            const distancia = measure(Number(coords._latitude),Number(coords._longitude),lat,lng);
-            if(distancia <= dist) resultado.push(item);
+            const distancia = measure(Number(coords._latitude), Number(coords._longitude), lat, lng); 
+            if(distancia <= dist) {
+                var r = { ...item, distancia };
+                resultado.push(r);
+            }
         });
         res.status(200).send(resultado);      
     } catch(error) {
@@ -1893,10 +2133,13 @@ var airQualityURL = "https://datosabiertos.malaga.eu/recursos/ambiente/calidadai
 
 app.get("/openData/airQuality/size", async(req,res) => {    //Cantidad de Datos - Count
       
-    //console.log("Fetching data...");
     try{
-      await refreshAirQuality();
-      res.status(200).send({"size": jsonAirQuality.length});
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
+        await refreshAirQuality();
+        res.status(200).send({"size": jsonAirQuality.length});
     } catch(error) {
         console.log(error);
         res.status(500).send(error);
@@ -1904,34 +2147,13 @@ app.get("/openData/airQuality/size", async(req,res) => {    //Cantidad de Datos 
 
 });
 
-async function autenticationFirebase(req,res){
-
-    const idToken = req.get("Authorization").split('Bearer ')[1];
-         console.log("Autorization------------------------> " + idToken);
-
-    await admin.auth().verifyIdToken(idToken).then((decodedToken) => {
-        const uid = decodedToken.uid;
-        // ...
-        console.log("----------------Usuario autorizado para acceder a las functions-----------------------");
-        console.log(uid);
-    })
-    .catch((error) => {
-        // Handle error
-        console.log("usuario no autorizado a acceder a las functions");
-        res.status(500).send(error);
-    });
-}
-
-
 app.get("/openData/airQuality/", async(req,res) => {    //Todos los Datos 
-    //console.log("Fetching data...");
-    try {    
-        //const idToken = req.headers.authorization.split('Bearer ')[1]
-         //const idToken = req.get("Authorization").split('Bearer ')[1];
-         //console.log("Autorization------------------------> " + idToken);
-         //idToken comes from the client app
-        await autenticationFirebase(req,res);
     
+    try {
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         await refreshAirQuality();
         res.status(200).send(jsonAirQuality);
     } catch(error) {
@@ -1941,28 +2163,29 @@ app.get("/openData/airQuality/", async(req,res) => {    //Todos los Datos
 });
 
 app.get("/openData/airQuality/in/:lat&:lng", async(req,res) => {    //Zonas Segun la Zona Lat y Long
-      
-    //console.log("Fetching data...");
 
     try{
 
-      await refreshAirQuality();
-      const lat = Number(req.params.lat);
-      const lng = Number(req.params.lng);
-      var cont = 0; 
-      var encontrado = false; 
-      var item = null; 
-      while(!encontrado && cont < jsonAirQuality.length) {
-        item = jsonAirQuality[cont];
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+        
+        await refreshAirQuality();
+        const lat = Number(req.params.lat);
+        const lng = Number(req.params.lng);
+        var cont = 0; 
+        var encontrado = false; 
+        var item = null; 
+        while(!encontrado && cont < jsonAirQuality.length) {
+            item = jsonAirQuality[cont];
 
-        if(between(item.zone[0]._longitude,item.zone[1]._longitude,lng) 
-            && between(item.zone[0]._latitude,item.zone[1]._latitude,lat)) encontrado = true; 
+            if(between(item.zone[0]._longitude,item.zone[1]._longitude,lng) 
+                && between(item.zone[0]._latitude,item.zone[1]._latitude,lat)) encontrado = true; 
 
-        cont++;
-      }
+            cont++;
+        }
 
-      if(encontrado) res.status(200).send(item);
-      else res.status(400).send({message : "ZONE NOT FOUND"});
+        if(encontrado) res.status(200).send(item);
+        else res.status(400).send({message : "ZONE NOT FOUND"});
             
     } catch(error) {
         console.log(error);
@@ -1972,18 +2195,20 @@ app.get("/openData/airQuality/in/:lat&:lng", async(req,res) => {    //Zonas Segu
 });
 
 app.get("/openData/airQuality/dataCO/:calidad", async(req,res) => { //Zonas Segun Calidad de CO
-      
-    //console.log("Fetching data...");
 
     try{
-      await refreshAirQuality();
-      const resultado = []
-      jsonAirQuality.forEach(item => {
-        if(item.co_level == req.params.calidad) resultado.push(item);
-      });
 
-      if(resultado.length == 0) res.status(400).send({message : "No se ha encontrado ninguno"});
-      else res.status(200).send(resultado);
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
+        await refreshAirQuality();
+        const resultado = []
+        jsonAirQuality.forEach(item => {
+            if(item.co_level == req.params.calidad) resultado.push(item);
+        });
+
+        if(resultado.length == 0) res.status(400).send({message : "No se ha encontrado ninguno"});
+        else res.status(200).send(resultado);
 
     } catch(error) {
         console.log(error);
@@ -2000,8 +2225,11 @@ var weatherURL = "http://api.openweathermap.org/data/2.5/weather?q=M%C3%A1laga&a
 
 app.get("/openWeatherMap/weather", async(req,res)=>{
 
-    //console.log("Fetching data...");
     try{
+
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         await getJSON(weatherURL).then(data => {
             res.status(200).send(data);
         });
@@ -2090,11 +2318,29 @@ async function refreshAirQuality(){
     }
 }
 
+async function authenticationFirebase(req,res){
+
+    const idToken = req.get("Authorization").split('Bearer ')[1];
+    //console.log("Autorization: " + idToken);
+
+    await admin.auth().verifyIdToken(idToken).then((decodedToken) => {
+        const uid = decodedToken.uid;
+        //console.log('Usr autorizado Firebase: ' + uid);
+    }).catch((error) => {
+        //console.log("Usr NO autorizado");
+        res.status(500).send(error);
+    });
+}
+
 ///////////////////////////////
 // FUNCIONES CON COORDENADAS //
 ///////////////////////////////
 
 app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas a un Punto
+    
+    //Comprobar si usuario Autenticado
+    await authenticationFirebase(req, res);
+
     const lat = Number(req.params.lat);
     const lng = Number(req.params.lng);
     const dist = Number(req.params.dist);
@@ -2123,9 +2369,11 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas
 
 //CONECTAR PARA OBTENER URL AUTHORIZE
 app.get("/flickr/conectar", async (req, res) => {
+    
     try{
 
-        await autenticationFirebase(req,res);
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
 
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
@@ -2142,13 +2390,11 @@ app.get("/flickr/conectar", async (req, res) => {
         //Obtener los token y configurar redirección
         let self = this;
         await oauth.request('https://localhost:4200/home').then(async function (res) {
-            console.log('yay!', res);
-            console.log(res.body.oauth_token);
-            console.log(res.body.oauth_token_secret);
+            //console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body..oauth_token_secret);
             self.token = res.body.oauth_token;
             self.token_secret = res.body.oauth_token_secret; 
         }).catch(function (err) {
-            console.error('bonk', err);
+            //console.error('bonk', err);
         });
 
 
@@ -2156,15 +2402,14 @@ app.get("/flickr/conectar", async (req, res) => {
         process.env.FLICKR_OAUTH_TOKEN_SECRET = this.token_secret; 
 
 
-        //url autorizacion si el usuario cancela le devuelve a la página inicio de flickr
+        //OAuth Url: Si el usuario cancela le devuelve a Flickr
         var url = oauth.authorizeUrl(this.token);
-        url = url + "&perms=write";
-        //url = url + "&perms=write&perms=delete";
-        console.log(url);
+        url = url + "&perms=write&perms=delete";
+        //console.log(url);
         res.status(200).send({"url":url}); 
 
     } catch(error) {
-        console.log(error);
+        //console.log(error);
         res.status(500).send(error);
     }
 });
@@ -2175,6 +2420,9 @@ app.post("/flickr/upload" ,async (req, res) => {
     
     try{
 
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
         const objArray = []
         const bb = new Busboy({ headers: req.headers });
         let fileData = {}
@@ -2183,7 +2431,7 @@ app.post("/flickr/upload" ,async (req, res) => {
         
         await new Promise((resolve, reject) => {
           bb.on('file', function (fieldname, file, filename, encoding, mimetype) {
-            console.log('File [%s]: filename=%j; encoding=%j; mimetype=%j', fieldname, filename, encoding, mimetype);
+            //console.log('File [%s]: filename=%j; encoding=%j; mimetype=%j', fieldname, filename, encoding, mimetype);
             fileData.file = filename
             fileData.fileName = filename
             fileData.encoding = encoding
@@ -2198,49 +2446,40 @@ app.post("/flickr/upload" ,async (req, res) => {
             file.on("end", () => {
                 const fileStream = createReadableStream(f);
                 req.body[fieldname] = fileStream;
-                console.log(fieldname);
+                //console.log(fieldname);
             });
 
             }).on('field', (fieldname, val) => {
-                try {
-                formData[fieldname] = JSON.parse(val)
-                } catch (err) {
-                formData[fieldname] = val
-                }
+                try { formData[fieldname] = JSON.parse(val)
+                } catch (err) { formData[fieldname] = val }
             })
             .on("finish", resolve)
             .on('error', err => { throw err })
             bb.end(req.body)
         })
         
-
         this.oauthToken = formData.oauth_token;
         this.oauthVerifier = formData.oauth_verifier; 
 
-
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
-
 
         var oauth = new Flickr.OAuth(
             process.env.FLICKR_CONSUMER_KEY,
             process.env.FLICKR_CONSUMER_SECRET
         );
-
         
         let self = this; 
         await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
-            console.log('oauth token:', res.body.oauth_token);
-            console.log('oauth token secret:', res.body.oauth_token_secret);
+            //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
         }).catch(function (err) {
-        console.log('bonk', err);
+            //console.log('bonk', err);
         });
 
         process.env.FLICKR_OAUTH_TOKEN = this.token ;
         process.env.FLICKR_OAUTH_TOKEN_SECRET = this.tokenSecret ;
-
 
         var flickr = Flickr.OAuth.createPlugin(
             process.env.FLICKR_CONSUMER_KEY,
@@ -2249,24 +2488,21 @@ app.post("/flickr/upload" ,async (req, res) => {
             process.env.FLICKR_OAUTH_TOKEN_SECRET
         );
 
-
         var upload = new Flickr.Upload(flickr, req.body.file , {
             title: formData.title
         });
-     
-        upload.then(async function(resultado) {
-            console.log('yay!', resultado.body.photoid._content);
-            let resul = await getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=9cab71d9d05b7c91e06ae4da65b6ba8d&photo_id="+ resultado.body.photoid._content + "&format=json&nojsoncallback=?");
-            res.status(200).send(resul);
-
+    
+        upload.then(function (resultado) {
+            //console.log('Body_Content: ', resultado.body.photoid._content);
+            let result = await getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=9cab71d9d05b7c91e06ae4da65b6ba8d&photo_id="+ resultado.body.photoid._content + "&format=json&nojsoncallback=?");
+            res.status(200).send(result);
         }).catch(function (err) {
-            console.error('bonk', err);
+            //console.error('bonk', err);
             res.status(500).send(err);
         });
 
-
     } catch(error) {
-        console.log(error);
+        //console.log(error);
         res.status(500).send(error);
     }
 });
@@ -2274,9 +2510,7 @@ app.post("/flickr/upload" ,async (req, res) => {
 const createReadableStream = (buffer) => {
     const readableInstanceStream = new Readable({
         read() {
-            for (const bytes of buffer) {
-                this.push(bytes);
-            }
+            for (const bytes of buffer) this.push(bytes);
             this.push(null);
         },
     });
