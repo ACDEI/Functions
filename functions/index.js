@@ -2453,11 +2453,6 @@ app.post("/flickr/upload" ,async (req, res) => {
             file.on("end", () => {
                 const fileStream = createReadableStream(f);
                 req.body[fieldname] = fileStream;
-<<<<<<< Updated upstream
-                //console.log(fieldname);
-=======
-        
->>>>>>> Stashed changes
             });
 
             }).on('field', (fieldname, val) => {
@@ -2479,19 +2474,10 @@ app.post("/flickr/upload" ,async (req, res) => {
             process.env.FLICKR_CONSUMER_KEY,
             process.env.FLICKR_CONSUMER_SECRET
         );
-<<<<<<< Updated upstream
         
         let self = this; 
         await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
             //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
-=======
-
-        console.log("------------------->" + process.env.FLICKR_OAUTH_TOKEN_SECRET);
-        let self = this; 
-        await oauth.verify(this.oauthToken, this.oauthVerifier,this.token_secret).then(function (res) {
-            console.log('oauth token:', res.body.oauth_token);
-            console.log('oauth token secret:', res.body.oauth_token_secret);
->>>>>>> Stashed changes
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
         }).catch(function (err) {
