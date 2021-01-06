@@ -2465,13 +2465,15 @@ app.post("/flickr/upload" ,async (req, res) => {
             });
 
             }).on('field', (fieldname, val) => {
-                try { formData[fieldname] = JSON.parse(val)
+                try { formData[fieldname] = JSON.parse(val);
                 } catch (err) { formData[fieldname] = val }
             })
             .on("finish", resolve)
             .on('error', err => { throw err })
             bb.end(req.body)
         })
+
+        console.log(formData);
         
         this.oauthToken = formData.oauth_token;
         this.oauthVerifier = formData.oauth_verifier; 
@@ -2483,9 +2485,15 @@ app.post("/flickr/upload" ,async (req, res) => {
             process.env.FLICKR_CONSUMER_KEY,
             process.env.FLICKR_CONSUMER_SECRET
         );
+
+        console.log(this.oauthToken);
+        console.log(this.oauthVerifier);
+        console.log(formData.token_secret);
+        console.log(this.token_secret);
+        //console.log();
         
         let self = this; 
-        await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
+        await oauth.verify(this.oauthToken, this.oauthVerifier, formData.token_secret).then(function (res) {
             //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
