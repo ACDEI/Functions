@@ -1385,6 +1385,7 @@ app.post(pubs, async (req, res) => {
     
     try{
 
+        console.log(req.body);
         //Comprobar si usuario Autenticado
         await authenticationFirebase(req, res);
 
@@ -2421,7 +2422,7 @@ app.get("/flickr/conectar", async (req, res) => {
         var url = oauth.authorizeUrl(this.token);
         url = url + "&perms=write&perms=delete";
         //console.log(url);
-        res.status(200).send({"url":url, "token_secret": this.token_secret}); 
+        res.status(200).send({"url":url}); 
 
     } catch(error) {
         //console.log(error);
@@ -2484,7 +2485,7 @@ app.post("/flickr/upload" ,async (req, res) => {
         );
         
         let self = this; 
-        await oauth.verify(this.oauthToken, this.oauthVerifier, formData.token_secret).then(function (res) {
+        await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
             //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
