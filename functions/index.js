@@ -1318,6 +1318,14 @@ app.put(pubs + ":pid", async (req, res) => {
              delete req.body.lat
              delete req.body.lng
         }
+        if(req.body.themes != null) {
+            var ts = [];
+            req.body.themes.forEach(t => {
+                ts.push(t.name);
+            })
+            delete req.body.themes;
+            req.body['themes'] = ts;
+        }
         await publication.update(req.body);
 
         var requireUpdate = false;  //Solo si el titulo es diferente
@@ -1377,9 +1385,8 @@ app.post(pubs, async (req, res) => {
     
     try{
 
-        console.log('nose')
         //Comprobar si usuario Autenticado
-        //await authenticationFirebase(req, res);
+        await authenticationFirebase(req, res);
 
         var result = await admin.firestore().collection(col_users).doc(req.body.uid);
         var existsU = (await result.get()).data(); 
