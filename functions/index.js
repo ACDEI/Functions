@@ -2493,7 +2493,7 @@ app.post("/flickr/upload" ,async (req, res) => {
         //console.log();
         
         let self = this; 
-        await oauth.verify(this.oauthToken, this.oauthVerifier, this.token_secret).then(function (res) {
+        await oauth.verify(this.oauthToken, this.oauthVerifier, formData.token_secret).then(function (res) {
             //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
