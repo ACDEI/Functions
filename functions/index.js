@@ -10,8 +10,8 @@ var Twitter = require('twitter');
 var cliente = new Twitter({
     consumer_key: 'Dgm9BLUenJRRG1ybL0HZXv0KP',
     consumer_secret: 'JpfwdMSyCACBJMXGjF5KcbnSvmuv9HwBQyF2NyU0On08tOaZfG',
-    access_token_key: '1166330251527540741-4pNAmr3qQBCCMC0Q6pmyAnZ88sWSuz',
-    access_token_secret: 'VJMwwN48gfuFIAcORvJa8NVApnrPn0NSa19M6HgXs5xx2'
+    access_token_key: '',
+    access_token_secret: ''
   });
 
 //npm i --save cross-fetch 
@@ -2531,15 +2531,16 @@ app.post("/flickr/upload" ,async (req, res) => {
 
 //TWITTER/////////////
 
-app.get("/tweet/prueba" ,async (req, res) => {
+app.get("/tweet/update" ,async (req, res) => {
     try{
         console.log("ENTRO CRACKS");
         
-
+        
           cliente.post('statuses/update', {status: 'I Love Twitter'},  function(error, tweet, response) {
             if(error) throw error;
             console.log(tweet);  // Tweet body.
             console.log(response);  // Raw response object.
+            res.status(200).send(tweet);
           });
     } catch (error) {
         res.status(500).send(error);
