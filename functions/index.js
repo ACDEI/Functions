@@ -2529,24 +2529,28 @@ app.post("/flickr/upload" ,async (req, res) => {
     }
 });
 
-//TWITTER/////////////
+///////////////////////////////
+// twitter //
+///////////////////////////////
 
-app.get("/tweet/update" ,async (req, res) => {
+app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
     try{
-        console.log("ENTRO CRACKS");
-        
-        
-          cliente.post('statuses/update', {status: 'I Love Twitter'},  function(error, tweet, response) {
+        //Comprobar si usuario Autenticado
+        await authenticationFirebase(req, res);
+
+          cliente.post('statuses/update', {status: req.body.status},  function(error, tweet, response) {
             if(error) throw error;
             console.log(tweet);  // Tweet body.
             console.log(response);  // Raw response object.
-            res.status(200).send(tweet);
+            res.status(200).send({message: "status succesfully sent"});
           });
     } catch (error) {
         res.status(500).send(error);
         console.log(error);
     }
 });
+
+
 
 
 
