@@ -5,14 +5,9 @@ var GeoFirestore = require('geofirestore').GeoFirestore;
 const admin = require("firebase-admin");
 const { ref } = require("firebase-functions/lib/providers/database");
 var latinize = require('latinize'); //Quitar Tildes : npm i latinize
-var Twitter = require('twitter');
+var OAuth = require('oauth');
 
-var cliente = new Twitter({
-    consumer_key: 'Dgm9BLUenJRRG1ybL0HZXv0KP',
-    consumer_secret: 'JpfwdMSyCACBJMXGjF5KcbnSvmuv9HwBQyF2NyU0On08tOaZfG',
-    access_token_key: '',
-    access_token_secret: ''
-  });
+
 
 //npm i --save cross-fetch 
 const fetch = require('cross-fetch').fetch;
@@ -2529,21 +2524,58 @@ app.post("/flickr/upload" ,async (req, res) => {
     }
 });
 
+
+
 ///////////////////////////////
 // twitter //
 ///////////////////////////////
 
+var twitter_application_consumer_key ='Dgm9BLUenJRRG1ybL0HZXv0KP';
+var twitter_application_secret = 'JpfwdMSyCACBJMXGjF5KcbnSvmuv9HwBQyF2NyU0On08tOaZfG';
+
+
+
 app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
     try{
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        //await authenticationFirebase(req, res);
+      
+        const snapshot =await  admin.firestore().collection(col_users).doc(req.params.uid).get();
+        
+ 
+  
+        var oauth = new OAuth.OAuth(
+            'https://api.twitter.com/oauth/request_token',
+            'https://api.twitter.com/oauth/access_token',
+            twitter_application_consumer_key,
+            twitter_application_secret,
+            '1.0A',
+            null,
+            'HMAC-SHA1'
+        );
+        
+        console.log(req.body);
+        
+        
+        
+        
+        // console.log('Ready to Tweet article:\n\t', postBody.status);
+        oauth.post('https://api.twitter.com/1.1/statuses/update.json',
+            snapshot.data().accessToken,  // oauth_token (user access token)
+            snapshot.data().tokenSecret,  // oauth_secret (user secret)
+            req.body,  // post body
+            '',  // post content type ?
+            function(err, data, result) {
+                if (err) {
+                    console.log(err);
+                    throw err;
+                } else {
+                    // console.log(data);
+                    res.status(200).send(data);
+                }
+            });
 
-          cliente.post('statuses/update', {status: req.body.status},  function(error, tweet, response) {
-            if(error) throw error;
-            console.log(tweet);  // Tweet body.
-            console.log(response);  // Raw response object.
-            res.status(200).send({message: "status succesfully sent"});
-          });
+
     } catch (error) {
         res.status(500).send(error);
         console.log(error);

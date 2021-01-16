@@ -22,7 +22,9 @@
     "geofirestore": "^4.4.1",
     "jquery": "^3.5.1",
     "latinize": "^0.4.1",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "oauth": "^0.9.15",
+    "twitter-api-client": "^1.2.4"
   },
   "devDependencies": {
     "firebase-functions-test": "^0.2.0"
