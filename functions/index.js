@@ -28,12 +28,6 @@ var dateAirQuality = null;
 // Flickr Necessary Information
 var Busboy = require('busboy');
 var Flickr = require('flickr-sdk');
-var token_secret = "";
-var oauthToken = "";
-var oauthVerifier="";
-var token = "";
-var tokenSecret = "";
-var idFoto = "";
 const Readable = require('readable-stream');
 
 //Twitter API
@@ -1574,7 +1568,7 @@ app.post(pubs + 'likes/:pid', async(req, res) => {    //Add a User to Pub By PID
     try{
 
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        //await authenticationFirebase(req, res);
 
         const uidP = req.body.uid.toString();     // UID del Usuario
         const pid = req.params.pid.toString();       //PID de la imagen
@@ -1606,8 +1600,8 @@ app.post(pubs + 'likes/:pid', async(req, res) => {    //Add a User to Pub By PID
         } else res.status(400).send({message: "Liked Already Exists"});
 
     } catch (error) {
-        res.status(500).send(error);
         console.log(error);
+        res.status(500).send(error);
     }
 
 });
@@ -2335,17 +2329,21 @@ async function refreshAirQuality(){
 }
 
 async function authenticationFirebase(req,res){
-
+    let uid;
     const idToken = req.get("Authorization").split('Bearer ')[1];
     //console.log("Autorization: " + idToken);
 
     await admin.auth().verifyIdToken(idToken).then((decodedToken) => {
-        const uid = decodedToken.uid;
+        uid = decodedToken.uid;
+        
         //console.log('Usr autorizado Firebase: ' + uid);
     }).catch((error) => {
         //console.log("Usr NO autorizado");
-        res.status(500).send(error);
+        //res.status(500).send(error);
+        throw error;
     });
+
+    return uid;
 }
 
 ///////////////////////////////
@@ -2353,7 +2351,7 @@ async function authenticationFirebase(req,res){
 ///////////////////////////////
 
 app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas a un Punto
-    
+
     //Comprobar si usuario Autenticado
     await authenticationFirebase(req, res);
 
@@ -2383,19 +2381,27 @@ app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas
 // FUNCIONES FLICKR //
 //////////////////////
 
+app.get("/flickr/guardarToken/:uid", async (req,res) => {
+    let oauth_token = req.params.oauth_token;
+    let oauth_verifier = req.params.oauth_verifier;
+    console("oauthToken",oauth_token,", oauthVerifier",oauth_verifier, ", uid", uid)
+    res.redirect("https://localhost:4200/home")
+})
+
 //CONECTAR PARA OBTENER URL AUTHORIZE
 app.get("/flickr/conectar", async (req, res) => {
     
     try{
 
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        let uid = await authenticationFirebase(req, res);
+
+        console.log("Conectar: ", uid)
 
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
         process.env.FLICKR_API_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
-        var token = "";
     
         //Plugin para obtener Request-Token
         var oauth = new Flickr.OAuth(
@@ -2405,26 +2411,44 @@ app.get("/flickr/conectar", async (req, res) => {
 
         //Obtener los token y configurar redirección
         let self = this;
+
+        let oauth_token;
+        let token_secret;
+
         //console.log(req.query.url);
+        //let urlgt = 'http://localhost:5001/graffiti-9b570/us-central1/MalagArtApiWeb/flickr/guardarToken/' + uid
         await oauth.request(req.query.url).then(async function (res) {
-            //console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body..oauth_token_secret);
-            self.token = res.body.oauth_token;
-            self.token_secret = res.body.oauth_token_secret; 
+            console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body.oauth_token_secret);
+            oauth_token = res.body.oauth_token;
+            token_secret = res.body.oauth_token_secret;
+            console.log(res.body)
             //console.log("-----------------------> 1 " + self.token_secret);
         }).catch(function (err) {
+            throw err
             //console.error('bonk', err);
         });
 
+        /*
+        await oauth.verify(oauthToken, this.oauthVerifier, token_secret).then(function (res) {
+            console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
+            self.token = res.body.oauth_token;
+            self.tokenSecret = res.body.oauth_token_secret;
+        }).catch(function (err) {
+            throw err;
+            console.log('bonk', err);
+        });
+        */
 
-        process.env.FLICKR_OAUTH_TOKEN = this.token; 
-        process.env.FLICKR_OAUTH_TOKEN_SECRET = this.token_secret; 
+
+        process.env.FLICKR_OAUTH_TOKEN = oauth_token; 
+        process.env.FLICKR_OAUTH_TOKEN_SECRET = token_secret; 
         //console.log("-----------------------------------> 2 " + this.token_secret);
 
         //OAuth Url: Si el usuario cancela le devuelve a Flickr
-        var url = oauth.authorizeUrl(this.token);
+        var url = oauth.authorizeUrl(oauth_token);
         url = url + "&perms=write&perms=delete";
         //console.log(url);
-        res.status(200).send({"url":url, "token_secret": this.token_secret}); 
+        res.status(200).send({"url":url, "token_secret": token_secret}); 
 
     } catch(error) {
         //console.log(error);
@@ -2439,7 +2463,7 @@ app.post("/flickr/upload" ,async (req, res) => {
     try{
 
         //Comprobar si usuario Autenticado
-        //await authenticationFirebase(req, res);
+        let uid = await authenticationFirebase(req, res);
 
         const objArray = []
         const bb = new Busboy({ headers: req.headers });
@@ -2475,8 +2499,8 @@ app.post("/flickr/upload" ,async (req, res) => {
             bb.end(req.body)
         })
         
-        this.oauthToken = formData.oauth_token;
-        this.oauthVerifier = formData.oauth_verifier; 
+        let oauthToken = formData.oauth_token;
+        let oauthVerifier = formData.oauth_verifier; 
 
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
@@ -2485,18 +2509,32 @@ app.post("/flickr/upload" ,async (req, res) => {
             process.env.FLICKR_CONSUMER_KEY,
             process.env.FLICKR_CONSUMER_SECRET
         );
-        
-        let self = this; 
-        await oauth.verify(this.oauthToken, this.oauthVerifier, formData.token_secret).then(function (res) {
-            //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
-            self.token = res.body.oauth_token;
-            self.tokenSecret = res.body.oauth_token_secret;
-        }).catch(function (err) {
-            //console.log('bonk', err);
-        });
 
-        process.env.FLICKR_OAUTH_TOKEN = this.token ;
-        process.env.FLICKR_OAUTH_TOKEN_SECRET = this.tokenSecret ;
+        let oauthToken2;
+        let tokenSecret;
+
+        let user = await db.collection('users').doc(uid).get();
+
+        if(user.data().flickrTokens == null) {
+            await oauth.verify(oauthToken, oauthVerifier, formData.token_secret).then(async function (res) {
+                //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
+                oauthToken2 = res.body.oauth_token;
+                tokenSecret = res.body.oauth_token_secret;
+    
+                await db.collection('users').doc(uid).update({flickrTokens: {oauth: oauthToken2, secret: tokenSecret}})
+            }).catch(function (err) {
+                throw err;
+                console.log('bonk', err);
+            });
+        }else{
+            oauthToken2 = user.data().flickrTokens.oauth;
+            tokenSecret = user.data().flickrTokens.secret;
+        }
+        
+        console.log('OAuth_Token: ', oauthToken2 + '; OAuth_Token_Secret: ', tokenSecret);
+
+        process.env.FLICKR_OAUTH_TOKEN = oauthToken2 ;
+        process.env.FLICKR_OAUTH_TOKEN_SECRET = tokenSecret ;
 
         var flickr = Flickr.OAuth.createPlugin(
             process.env.FLICKR_CONSUMER_KEY,
@@ -2515,7 +2553,7 @@ app.post("/flickr/upload" ,async (req, res) => {
             res.status(200).send(result);
         }).catch(function (err) {
             //console.error('bonk', err);
-            res.status(500).send(err);
+            throw err
         });
 
     } catch(error) {

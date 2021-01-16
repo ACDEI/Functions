@@ -17,7 +17,7 @@
     "busboy": "^0.3.1",
     "cross-fetch": "^3.0.6",
     "firebase-admin": "^9.4.2",
-    "firebase-functions": "^3.13.0",
+    "firebase-functions": "^3.13.1",
     "flickr-sdk": "^3.10.0",
     "geofirestore": "^4.4.1",
     "jquery": "^3.5.1",
