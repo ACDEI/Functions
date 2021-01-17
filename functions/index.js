@@ -7,8 +7,6 @@ const { ref } = require("firebase-functions/lib/providers/database");
 var latinize = require('latinize'); //Quitar Tildes : npm i latinize
 var OAuth = require('oauth');
 
-
-
 //npm i --save cross-fetch 
 const fetch = require('cross-fetch').fetch;
 admin.initializeApp();
@@ -1568,7 +1566,7 @@ app.post(pubs + 'likes/:pid', async(req, res) => {    //Add a User to Pub By PID
     try{
 
         //Comprobar si usuario Autenticado
-        //await authenticationFirebase(req, res);
+        await authenticationFirebase(req, res);
 
         const uidP = req.body.uid.toString();     // UID del Usuario
         const pid = req.params.pid.toString();       //PID de la imagen
@@ -2394,7 +2392,7 @@ app.get("/flickr/conectar", async (req, res) => {
     try{
 
         //Comprobar si usuario Autenticado
-        let uid = await authenticationFirebase(req, res);
+        await authenticationFirebase(req, res);
 
         //console.log("Conectar: ", uid)
 
@@ -2427,17 +2425,6 @@ app.get("/flickr/conectar", async (req, res) => {
             throw err
             //console.error('bonk', err);
         });
-
-        /*
-        await oauth.verify(oauthToken, this.oauthVerifier, token_secret).then(function (res) {
-            //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
-            self.token = res.body.oauth_token;
-            self.tokenSecret = res.body.oauth_token_secret;
-        }).catch(function (err) {
-            throw err;
-            //console.log('bonk', err);
-        });
-        */
 
 
         process.env.FLICKR_OAUTH_TOKEN = oauth_token; 
@@ -2612,10 +2599,6 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
         console.log(error);
     }
 });
-
-
-
-
 
 const createReadableStream = (buffer) => {
     const readableInstanceStream = new Readable({
