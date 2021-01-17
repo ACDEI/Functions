@@ -2576,7 +2576,7 @@ var twitter_application_secret = 'JpfwdMSyCACBJMXGjF5KcbnSvmuv9HwBQyF2NyU0On08tO
 app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
     try{
         //Comprobar si usuario Autenticado
-        //await authenticationFirebase(req, res);
+        await authenticationFirebase(req, res);
       
         const snapshot =await  admin.firestore().collection(col_users).doc(req.params.uid).get();
         
