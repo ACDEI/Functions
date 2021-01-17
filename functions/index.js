@@ -134,7 +134,7 @@ app.get(users + "email/:email", async (req, res) => {    //User By Email (withou
         const users = [];
         const email = latinize(req.params.email.trim().toLowerCase());
         snapshot.forEach((doc) => {
-            console.log(doc.data());
+            //console.log(doc.data());
             var emailD = latinize(doc.data().email.toLowerCase());
             if(emailD === email){
                 const id = doc.id;
@@ -364,7 +364,7 @@ app.put(users + ':uid', async(req, res) => {
 
             //Actualizo al usuario de sus Seguidores
             for(const uidFd of usrFd) {
-                console.log(uidFd);
+                //console.log(uidFd);
                 await admin.firestore().collection(col_users).doc(uidFd.uid).collection(col_followers).doc(useruid).update({
                     nick: user.nickName,
                     image: user.photoURL
@@ -2396,7 +2396,7 @@ app.get("/flickr/conectar", async (req, res) => {
         //Comprobar si usuario Autenticado
         let uid = await authenticationFirebase(req, res);
 
-        console.log("Conectar: ", uid)
+        //console.log("Conectar: ", uid)
 
         //Configurar claves de FlickrAPI
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
@@ -2418,10 +2418,10 @@ app.get("/flickr/conectar", async (req, res) => {
         //console.log(req.query.url);
         //let urlgt = 'http://localhost:5001/graffiti-9b570/us-central1/MalagArtApiWeb/flickr/guardarToken/' + uid
         await oauth.request(req.query.url).then(async function (res) {
-            console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body.oauth_token_secret);
+            //console.log('Oauth_Token: ' + res.body.oauth_token + '; Oauth_Token_Secret: ' + res.body.oauth_token_secret);
             oauth_token = res.body.oauth_token;
             token_secret = res.body.oauth_token_secret;
-            console.log(res.body)
+            //console.log(res.body)
             //console.log("-----------------------> 1 " + self.token_secret);
         }).catch(function (err) {
             throw err
@@ -2430,12 +2430,12 @@ app.get("/flickr/conectar", async (req, res) => {
 
         /*
         await oauth.verify(oauthToken, this.oauthVerifier, token_secret).then(function (res) {
-            console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
+            //console.log('OAuth_Token: ', res.body.oauth_token + '; OAuth_Token_Secret: ', res.body.oauth_token_secret);
             self.token = res.body.oauth_token;
             self.tokenSecret = res.body.oauth_token_secret;
         }).catch(function (err) {
             throw err;
-            console.log('bonk', err);
+            //console.log('bonk', err);
         });
         */
 
@@ -2524,14 +2524,14 @@ app.post("/flickr/upload" ,async (req, res) => {
                 await db.collection('users').doc(uid).update({flickrTokens: {oauth: oauthToken2, secret: tokenSecret}})
             }).catch(function (err) {
                 throw err;
-                console.log('bonk', err);
+                //console.log('bonk', err);
             });
         }else{
             oauthToken2 = user.data().flickrTokens.oauth;
             tokenSecret = user.data().flickrTokens.secret;
         }
         
-        console.log('OAuth_Token: ', oauthToken2 + '; OAuth_Token_Secret: ', tokenSecret);
+        //console.log('OAuth_Token: ', oauthToken2 + '; OAuth_Token_Secret: ', tokenSecret);
 
         process.env.FLICKR_OAUTH_TOKEN = oauthToken2 ;
         process.env.FLICKR_OAUTH_TOKEN_SECRET = tokenSecret ;
@@ -2579,8 +2579,6 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
         await authenticationFirebase(req, res);
       
         const snapshot =await  admin.firestore().collection(col_users).doc(req.params.uid).get();
-        
- 
   
         var oauth = new OAuth.OAuth(
             'https://api.twitter.com/oauth/request_token',
@@ -2592,11 +2590,6 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
             'HMAC-SHA1'
         );
         
-        console.log(req.body);
-        
-        
-        
-        
         // console.log('Ready to Tweet article:\n\t', postBody.status);
         oauth.post('https://api.twitter.com/1.1/statuses/update.json',
             snapshot.data().accessToken,  // oauth_token (user access token)
@@ -2605,7 +2598,7 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
             '',  // post content type ?
             function(err, data, result) {
                 if (err) {
-                    console.log(err);
+                    //console.log(err);
                     throw err;
                 } else {
                     // console.log(data);
