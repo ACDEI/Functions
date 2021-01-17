@@ -2110,7 +2110,7 @@ app.get("/openData/landmarks/near/:lat&:lng&:dist", async(req,res) => {     //Mo
     try{
 
         //Comprobar si usuario Autenticado
-        await authenticationFirebase(req, res);
+        //await authenticationFirebase(req, res);
 
         await refreshMonuments();
         const lat = Number(req.params.lat);
@@ -2353,7 +2353,7 @@ async function authenticationFirebase(req,res){
 app.get("/near/:lat&:lng&:dist", async (req, res) => {  //Publicaciones Cercanas a un Punto
 
     //Comprobar si usuario Autenticado
-    await authenticationFirebase(req, res);
+    //await authenticationFirebase(req, res);
 
     const lat = Number(req.params.lat);
     const lng = Number(req.params.lng);
