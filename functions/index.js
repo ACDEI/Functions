@@ -453,10 +453,10 @@ app.delete(users + ":uid", async (req, res) => {
         //Comprobar si usuario Autenticado
         await authenticationFirebase(req, res);
 
-        const uid = req.params.uid.toString();
+        const useruid = req.params.uid.toString();
 
         //Compruebo que Existe el Usuario
-        const userToDelete = (await admin.firestore().collection(col_users).doc(uid).get()).data();
+        const userToDelete = (await admin.firestore().collection(col_users).doc(useruid).get()).data();
         var required = false;
         if( userToDelete != null) required = true;
 
@@ -489,7 +489,7 @@ app.delete(users + ":uid", async (req, res) => {
              }
 
             //Cojo Todos Los Likes del User -> Para sus Likes
-            const userLikes = await admin.firestore().collection(col_users).doc(uid).collection(col_likes).get();
+            const userLikes = await admin.firestore().collection(col_users).doc(useruid).collection(col_likes).get();
             const usrL = [];
             userLikes.forEach(doc => {
                 var pid = doc.data().pid;   //Id de Pub que tiene Like
@@ -499,16 +499,16 @@ app.delete(users + ":uid", async (req, res) => {
             //Borro al usuario de sus Likes
             for(const pid of usrL) {
                 //Borrar Coleccion de Likes -> Eliminar Todos Sus Documentos
-                await admin.firestore().collection(col_users).doc(uid).collection(col_likes).doc(pid).delete();
+                await admin.firestore().collection(col_users).doc(useruid).collection(col_likes).doc(pid).delete();
                 //Borrar Like de Usuario de la Publicacion
-                await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(uid).delete();
+                await admin.firestore().collection(col_pubs).doc(pid).collection(col_likes).doc(useruid).delete();
             }
 
             /*
                 BORRAR SEGUIDORES DEL USUARIO
             */
             //Cojo Todos Los Followers del User -> User es SEGUIDO por ellos
-            const userFollowers = await admin.firestore().collection(col_users).doc(uid).collection(col_followers).get();
+            const userFollowers = await admin.firestore().collection(col_users).doc(useruid).collection(col_followers).get();
             const usrFw = [];
             userFollowers.forEach(doc => {
                 var uidFw = doc.data().uid;   //Id de Usr que le Sigue
@@ -518,16 +518,16 @@ app.delete(users + ":uid", async (req, res) => {
             //Borro al usuario de sus Seguidos
             for(const uidFw of usrFw) {
                 //Borrar Coleccion de Followed -> Eliminar Todos Sus Documentos
-                await admin.firestore().collection(col_users).doc(uid).collection(col_followers).doc(uidFw).delete();
+                await admin.firestore().collection(col_users).doc(useruid).collection(col_followers).doc(uidFw).delete();
                 //Borrar Usuario de Seguidores de B
-                await admin.firestore().collection(col_users).doc(uidFw).collection(col_followed).doc(uid).delete();
+                await admin.firestore().collection(col_users).doc(uidFw).collection(col_followed).doc(useruid).delete();
             }
 
             /*
                 BORRAR SEGUIDOS DEL USUARIO
             */
             //Cojo Todos Los Followed del User -> User es SEGUIDOR de ellos
-            const userFollowed = await admin.firestore().collection(col_users).doc(uid).collection(col_followed).get();
+            const userFollowed = await admin.firestore().collection(col_users).doc(useruid).collection(col_followed).get();
             const usrFd = [];
             userFollowed.forEach(doc => {
                 var uidFd = doc.data().uid;   //Id de Usr que le Sigue
@@ -537,9 +537,9 @@ app.delete(users + ":uid", async (req, res) => {
             //Borro al usuario de sus Seguidores
             for(const uidFd of usrFd) {
                 //Borrar Coleccion de Followed -> Eliminar Todos Sus Documentos
-                await admin.firestore().collection(col_users).doc(uid).collection(col_followed).doc(uidFd).delete();
+                await admin.firestore().collection(col_users).doc(useruid).collection(col_followed).doc(uidFd).delete();
                 //Borrar Usuario de Seguidores de B
-                await admin.firestore().collection(col_users).doc(uidFd).collection(col_followers).doc(uid).delete();
+                await admin.firestore().collection(col_users).doc(uidFd).collection(col_followers).doc(useruid).delete();
             }
 
             /*
@@ -547,7 +547,7 @@ app.delete(users + ":uid", async (req, res) => {
             */
             //Cojo Todos Los Comments del User
             const userComments = await admin.firestore().collection(col_comments);
-                userComments.where('uid', '==', uid).get()
+                userComments.where('uid', '==', useruid).get()
                 .then( snapshot => {
                 if(snapshot.size > 0) {
                     snapshot.forEach(item => {
@@ -560,7 +560,7 @@ app.delete(users + ":uid", async (req, res) => {
                 BORRAR VISITADOS DEL USUARIO
             */
             //Cojo Todos Los Comments del User
-            const userVisitados = await admin.firestore().collection(col_users).doc(uid).collection('visitados');
+            const userVisitados = await admin.firestore().collection(col_users).doc(useruid).collection('visitados');
                 userVisitados.get()
                 .then( snapshot => {
                 if(snapshot.size > 0) {
@@ -574,7 +574,7 @@ app.delete(users + ":uid", async (req, res) => {
                 BORRAR PUBLICACIONES DEL USUARIO
             */
            //Cojo Todos Las Pubs del User
-           const userPubs = await admin.firestore().collection(col_pubs).where('uid', '==', uid).get();
+           const userPubs = await admin.firestore().collection(col_pubs).where('uid', '==', useruid).get();
            const upA = [];
            userPubs.forEach(doc => {
                var pid = doc.data().pid;   //pId de Pub
@@ -588,10 +588,10 @@ app.delete(users + ":uid", async (req, res) => {
             /*
                 BORRAR USER
             */
-            await admin.firestore().collection(col_users).doc(uid).delete();
+            await admin.firestore().collection(col_users).doc(useruid).delete();
 
             //Eliminar de la Autentication
-            await admin.auth().deleteUser(uid);
+            await admin.auth().deleteUser(useruid);
 
             res.status(200).send({message : "User Deleted"});
 
