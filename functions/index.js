@@ -2489,6 +2489,9 @@ app.post("/flickr/upload" ,async (req, res) => {
         let oauthToken = formData.oauth_token;
         let oauthVerifier = formData.oauth_verifier; 
 
+        console.log(this.oauthToken);
+        console.log(this.oauthVerifier);
+
         process.env.FLICKR_CONSUMER_KEY = "9cab71d9d05b7c91e06ae4da65b6ba8d";
         process.env.FLICKR_CONSUMER_SECRET = "c590b7868c106336";
 
@@ -2539,8 +2542,9 @@ app.post("/flickr/upload" ,async (req, res) => {
             let result = await getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=9cab71d9d05b7c91e06ae4da65b6ba8d&photo_id="+ resultado.body.photoid._content + "&format=json&nojsoncallback=?");
             res.status(200).send(result);
         }).catch(function (err) {
-            //console.error('bonk', err);
-            throw err
+            console.error('bonk', err);
+            throw err;
+            //res.status(500).send(err);
         });
 
     } catch(error) {
@@ -2555,8 +2559,8 @@ app.post("/flickr/upload" ,async (req, res) => {
 // twitter //
 ///////////////////////////////
 
-var twitter_application_consumer_key ='Dgm9BLUenJRRG1ybL0HZXv0KP';
-var twitter_application_secret = 'JpfwdMSyCACBJMXGjF5KcbnSvmuv9HwBQyF2NyU0On08tOaZfG';
+var twitter_application_consumer_key ='Z0AjX9l5jgrLdM8A0AOVSR7sX';
+var twitter_application_secret = 'QHqz58hsYVw1czqmzuqJQHAN02Q8vwAAgNlZdBZ40veN5FjCAm';
 
 
 
@@ -2585,7 +2589,7 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
             '',  // post content type ?
             function(err, data, result) {
                 if (err) {
-                    //console.log(err);
+                    
                     throw err;
                 } else {
                     // console.log(data);
