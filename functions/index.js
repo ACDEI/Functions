@@ -1321,6 +1321,7 @@ app.put(pubs + ":pid", async (req, res) => {
             delete req.body.themes;
             req.body['themes'] = ts;
         }
+        console.log(req.body);
         await publication.update(req.body);
 
         var requireUpdate = false;  //Solo si el titulo es diferente
@@ -2569,7 +2570,7 @@ app.post("/twitter/updateStatus/:uid" ,async (req, res) => {
         //Comprobar si usuario Autenticado
         await authenticationFirebase(req, res);
       
-        const snapshot =await  admin.firestore().collection(col_users).doc(req.params.uid).get();
+        const snapshot = await admin.firestore().collection(col_users).doc(req.params.uid).get();
   
         var oauth = new OAuth.OAuth(
             'https://api.twitter.com/oauth/request_token',
